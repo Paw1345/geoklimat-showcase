@@ -1,9 +1,26 @@
 # GeoKlimat
 
-GeoKlimat is a prototype for monitoring environmental and climate information
-used by public administration, GIS specialists and environmental teams. It
-brings news, regulatory updates, data catalogues, spatial services and selected
-measurement or satellite metadata into one searchable application.
+GeoKlimat is an early-stage public-interest prototype for public-administration
+staff, GIS specialists and environmental teams in Poland and the EU. It is
+designed to bring environmental notices, regulatory changes, spatial-data
+services and selected measurement or satellite catalogue metadata into one
+searchable, source-linked workspace.
+
+## Why this project matters
+
+Environmental information is spread across institutional newsrooms, legal
+portals, open-data catalogues, spatial services and measurement platforms.
+GeoKlimat aims to make changes easier to discover and review while keeping the
+origin of each item visible. It is a discovery and monitoring layer: it does
+not replace official source systems, legal interpretation or professional
+decision-making.
+
+## Intended users
+
+- Public-administration teams tracking relevant notices and regulatory changes.
+- GIS specialists following spatial services and data-catalogue updates.
+- Environmental professionals reviewing information across institutional
+  channels.
 
 ## What it demonstrates
 

@@ -1,0 +1,6 @@
+{% extends "registry_base.html" %}{% block title %}Lokalne AI — GeoKlimat{% endblock %}
+{% block content %}<h1>Szkice lokalnego AI</h1>
+<p>{% if enabled %}Integracja włączona. Wymaga działającego lokalnego workera i modelu.{% else %}AI wyłączone. Uruchom dodatkowy profil compose.ai.yaml.{% endif %}</p>
+<p>Analiza pojedynczych opisów dokumentów, nie pełnych aktów. Propozycje AI nie są poradą prawną. Publikacja oceny wymaga sprawdzenia przez redaktora.</p>
+{% for draft in drafts %}<article><a href="{% url 'ai_draft' draft.pk %}">#{{ draft.pk }} — {{ draft.item.title }}</a><p>{{ draft.state }} · {{ draft.created_at }}</p></article>{% empty %}<p>Brak szkiców. Wybierz dokument w wątku zmian i „Przygotuj szkic AI”.</p>{% endfor %}
+<p>{% if drafts.has_previous %}<a href="?page={{ drafts.previous_page_number }}">Poprzednia</a>{% endif %} {{ drafts.number }} / {{ drafts.paginator.num_pages }} {% if drafts.has_next %}<a href="?page={{ drafts.next_page_number }}">Następna</a>{% endif %}</p>{% endblock %}

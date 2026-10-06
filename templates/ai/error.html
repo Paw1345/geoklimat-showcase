@@ -1,0 +1,2 @@
+{% extends "registry_base.html" %}{% block content %}<h1>Nie utworzono szkicu AI</h1>
+{{ error|join:" " }}<p><a href="{% url 'change_detail' thread.pk %}">Wróć do wątku</a></p>{% endblock %}

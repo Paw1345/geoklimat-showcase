@@ -1,0 +1,2 @@
+{% extends "registry_base.html" %}{% block title %}Logowanie — GeoKlimat{% endblock %}
+{% block content %}<h1>Logowanie</h1><p>Konta tworzy administrator. Nie ma konta ani hasła domyślnego.</p><form method="post">{% csrf_token %}{{ form.as_p }}<input type="hidden" name="next" value="{{ next }}"><button>Zaloguj się</button></form>{% endblock %}

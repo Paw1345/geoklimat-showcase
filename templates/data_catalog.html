@@ -1,0 +1,19 @@
+{% extends "registry_base.html" %}{% block content %}
+<h1>Dane pomiarowe, GIS i satelitarne</h1>
+{% if user.is_staff %}<p><a href="{% url 'stac_coverage' %}">STAC Polska/UE — zakres dat, postęp i dostępność kopii</a></p>{% endif %}
+{% if user.is_staff %}<p><a href="{% url 'data_storage' %}">Pojemność i retencja cache — rzeczywiste bajty, wygasłe kopie i fragmenty plików</a></p>{% endif %}
+{% if user.is_staff %}<p><a href="{% url 'vocabulary_catalog' %}">Słowniki INSPIRE — wartości i definicje PL/EN</a></p>{% endif %}
+{% if user.is_staff %}<p><a href="{% url 'measurement_history' %}">Historia pomiarów IMGW — stacje, odczyty i eksport JSON/CSV</a></p>{% endif %}
+{% if user.is_staff %}<p><a href="{% url 'spatial_search' %}">Wyszukiwanie przestrzenne i eksport GeoJSON z lokalnych kopii</a></p>{% endif %}
+<p><a href="{% url 'data_coverage' %}">Kompletność i dostępność przebiegów PIG</a></p>
+<p><a href="{% url 'data_catalog' %}">Wszystkie kanały danych</a> · <a href="?kind=file{% if request.GET.registry %}&amp;registry={{ request.GET.registry|urlencode }}{% endif %}">Pliki na żądanie</a></p>
+<p>Polska i UE · okno 30 dni · {{ used|filesizeformat }} z 15 GB · {{ snapshots }} aktualnych kopii.</p>
+<p>To osobny magazyn, nie lista newsów. 30 dni liczymy od pobrania kopii; pomiary i sceny dodatkowo filtrujemy według daty danych. Nie oznacza to uzupełnionego archiwum 30 dni. Limit dotyczy treści danych, nie indeksów bazy i kopii zapasowych.</p>
+<p>Duże pliki: tylko na żądanie administratora, w tle, w częściach po 4 MiB ze wznawianiem. Wszystkie części i gotowe pliki współdzielą limit 15 GB z pomiarami i GIS. Dostawca musi obsługiwać zakresy HTTP i stabilny ETag. Wymagane jest osobne zatwierdzenie kanału plikowego; nie pobieramy automatycznie archiwów satelitarnych ani zasobów wymagających konta.</p>
+{% for channel in channels %}<article><h2><a href="{% url 'data_detail' channel.pk %}">{{ channel.name }}</a></h2>
+<p>{{ channel.get_kind_display }} · {{ channel.region }} · {% if channel.last_status == 'sampled' %}próbka odświeżona{% else %}{{ channel.last_status }}{% endif %} · {% if channel.kind == "file" %}{% if channel.access_approved %}dostęp zatwierdzony, tylko na żądanie{% else %}oczekuje na zatwierdzenie dostępu{% endif %}{% elif channel.enabled and channel.access_approved %}harmonogram aktywny{% else %}harmonogram wyłączony{% endif %}</p>
+{% if channel.config.mode == 'stac_recent' %}<p>Świeża próbka 24h: maks. 2 strony / 20 scen co godzinę. Nie jest pełnym katalogiem dobowym; niezależna od pobierania historii.</p>{% endif %}
+{% if channel.config.mode == 'stac_bounded' %}<p>Wznawialne okno 24h: do 20 stron / 200 scen / 16 MiB. Bounded oznacza osiągnięty limit, paused — rezerwę cache, nie pełną dobę. Niezależne od historii i próbek.</p>{% endif %}
+<p>Źródło <a href="{% url 'registry_detail' channel.registry.registry_id %}">#{{ channel.registry.registry_id }} {{ channel.registry.organization }}</a></p>
+{% if channel.last_error %}<p>Błąd: {{ channel.last_error }}</p>{% endif %}</article>{% empty %}<p>Brak skonfigurowanych konektorów dla tego filtra. Rejestr zachowuje także źródła wymagające dedykowanej integracji.</p>{% endfor %}
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "registry_base.html" %}
+{% block title %}Wyszukiwanie przestrzenne — GeoKlimat{% endblock %}
+{% block content %}
+<h1>Wyszukiwanie przestrzenne w lokalnych kopiach</h1>
+<p>Przeszukujemy zweryfikowane, niewygasłe kopie PIG/MIDAS. Bez nowych żądań sieciowych, zadań pobierania i zmian danych.</p>
+<p><strong>Wybierz przecięcie rzeczywistej geometrii lub starszy tryb obwiedni.</strong>
+Tryb geometrii uwzględnia otwory i rozłączne części, odrzuca niepoprawną topologię
+bez naprawy. To planarne obliczenia we współrzędnych WGS84, nie maska granic Polski/UE
+ani obliczenia geodezyjne. Nie przycinamy geometrii i nie potwierdzamy stanu prawnego.</p>
+<p>WGS84/EPSG:4326, kolejność: długość, szerokość. Budżet odczytu do50MiB lub niższego limitu ręcznego, wynik do5MiB i500 obiektów.</p>
+<form method="get">{{ form.as_p }}<button>Wyszukaj / eksportuj</button></form>
+<p>Paczki: wpisz1 i wybierz mały limit wyników, jeśli cały zbiór przekracza budżet.
+Token przypina lokalny przebieg, filtry, metodę selekcji i kopie na1godzinę; nie przedłuża retencji.
+Zmieniając filtry, rozpocznij nowy przegląd bez starego tokena.</p>
+{% if error %}<form method="get">{% for field in form.visible_fields %}<input type="hidden" name="{{ field.name }}" value="{{ field.value|default_if_none:'' }}">{% endfor %}<button name="new_scope" value="1">Rozpocznij nowe paczki z tymi filtrami</button></form>{% endif %}
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if result %}
+<h2>Wynik</h2>
+{% if result.geoklimat_query.exact_geometry_intersection %}
+<p>Metoda: przecięcie geometrii z prostokątem, planarne WGS84, ze stykiem granic.
+Zweryfikowano topologię {{ result.geoklimat_query.topology_verified_features }} obiektów
+i {{ result.geoklimat_query.geometry_positions_checked }} pozycji współrzędnych.
+Nie jest to maska administracyjna ani przycięcie obiektów.</p>
+{% else %}
+<p><strong>Metoda: obwiednie, nie rzeczywiste przecięcie poligonów.</strong>
+Możliwe nadmiarowe trafienia w otworach i między częściami MultiPolygon.
+Topologia nie została sprawdzona.</p>
+{% endif %}
+{% if result.geoklimat_query.copy_batch %}
+<p><strong>Paczka {{ result.geoklimat_query.copy_batch.page }} z {{ result.geoklimat_query.copy_batch.pages }}.</strong>
+Sprawdzono{{ result.geoklimat_query.copy_batch.selected_copies }}kopii /
+{{ result.geoklimat_query.copy_batch.selected_bytes }}B. Zakotwiczony zakres:
+{{ result.geoklimat_query.copy_batch.total_copies }}kopii /{{ result.geoklimat_query.copy_batch.total_bytes }}B,
+stan{{ result.geoklimat_query.copy_batch.anchor }}.</p>
+<p>Trafienia i limit dotyczą wyłącznie tej paczki; liczba trafień w całym zbiorze jest nieznana.
+Nowe kopie po zakotwiczeniu nie rozszerzają zakresu. Integralność innych paczek nie została
+sprawdzona przez to żądanie; kolejne strony nie są jednoczasowym snapshotem dostawcy.</p>
+{% if result.geoklimat_query.copy_batch.has_previous %}<a href="{{ links.previous }}">← Poprzednia paczka</a> · {% endif %}
+{% if result.geoklimat_query.copy_batch.has_next %}<a href="{{ links.next }}">Następna paczka →</a> · {% endif %}
+<a href="{{ links.geojson }}">Eksport GeoJSON tej strony trafień</a> ·
+<a href="{{ links.new }}">Rozpocznij nowy przegląd</a>
+<p>Strona trafień {{ result.geoklimat_query.result_pagination.page }} z {{ result.geoklimat_query.result_pagination.pages }};
+pozycje {{ result.geoklimat_query.result_pagination.first }}–{{ result.geoklimat_query.result_pagination.last }} w tej paczce.
+Każda strona ponownie sprawdza wszystkie kopie wybranej paczki; limit dotyczy liczby zwróconych obiektów.</p>
+{% if result.geoklimat_query.result_pagination.has_previous %}<a href="{{ links.result_previous }}">← Poprzednie trafienia</a> · {% endif %}
+{% if result.geoklimat_query.result_pagination.has_next %}<a href="{{ links.result_next }}">Następne trafienia →</a>{% endif %}
+{% endif %}
+<p>{{ result.geoklimat_query.channel }}; przebieg {{ result.geoklimat_query.harvest_id }}; stan {{ result.geoklimat_query.as_of }}.</p>
+<p>Znaleziono {% if result.geoklimat_query.copy_batch %}w wybranej paczce{% else %}w dostępnych kopiach{% endif %}: {{ result.geoklimat_query.matches_in_available_copies }}. Zwrócono: {{ result.geoklimat_query.returned }}. Limit: {{ result.geoklimat_query.limit }}. {% if result.geoklimat_query.truncated %}<strong>Wynik ograniczony limitem.</strong>{% endif %}</p>
+{% if result.geoklimat_query.full_scope_verified %}<p>Zweryfikowano cały przypięty spis dostępnych kopii — nie jednoczasową wersję danych u dostawcy.</p>{% else %}<p><strong>Niepełne pokrycie: wynik dotyczy wyłącznie dostępnych kopii. Brak trafień nie dowodzi braku obiektów w obszarze.</strong></p>{% endif %}
+<p>{{ result.geoklimat_query.attribution }}</p>
+<div class="scroll"><table><thead><tr><th>ID źródłowe</th><th>Wybrane atrybuty (skrócony podgląd)</th></tr></thead><tbody>
+{% for feature in previews %}<tr><td>{{ feature.id }}</td><td>{% for key,value in feature.properties %}<p>{{ key }}: {{ value }}</p>{% endfor %}</td></tr>{% empty %}<tr><td colspan="2">Brak trafień w sprawdzonych kopiach.</td></tr>{% endfor %}
+</tbody></table></div>
+<p>GeoJSON zawiera pełne wybrane obiekty oraz raport pokrycia, daty i skróty kopii. Wybierz „Plik GeoJSON” w formularzu i ponów zapytanie.</p>
+{% endif %}
+<p><a href="{% url 'data_coverage' %}">Pokrycie i retencja zbiorów</a> · <a href="{% url 'registry_readiness' %}">Gotowość rejestru</a></p>
+{% endblock %}

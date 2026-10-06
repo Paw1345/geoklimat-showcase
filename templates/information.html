@@ -1,0 +1,17 @@
+{% extends "registry_base.html" %}
+{% block title %}Prywatność i ograniczenia — GeoKlimat{% endblock %}
+{% block content %}<h1>Prywatność i ograniczenia monitoringu</h1>
+<p>GeoKlimat łączy informacje ze źródeł zewnętrznych. Sprawdzaj oryginał i datę jego aktualizacji. Treści oraz oceny redakcyjne nie stanowią porady prawnej. Brak wpisu, terminu lub alertu nie oznacza braku obowiązku.</p>
+<h2>Dane w aplikacji</h2>
+<p>Konto przechowuje nazwę użytkownika, opcjonalny adres e-mail, skrót hasła i uprawnienia. Sesja służy do logowania; cookie CSRF zabezpiecza formularze. Aplikacja nie dodaje analityki ani reklamowych trackerów.</p>
+<p>Obserwacje, preferencje i alerty są prywatne w interfejsie. Administrator infrastruktury ma techniczny dostęp do bazy i kopii. Oceny redakcyjne, ich autorzy oraz historia decyzji są publiczne — nie wpisuj danych poufnych.</p>
+<p>Ochrona logowania zapisuje licznik i skrót HMAC adresu klienta dla pięciominutowego okna; nie zapisuje w nim hasła, loginu ani surowego IP. Logi serwera lub proxy mogą niezależnie zawierać adres IP i ścieżkę żądania.</p>
+<h2>Przechowywanie</h2>
+<p>Limit 30 dni i 15 GB dotyczy pobranych danych pomiarowych/GIS oraz plików, a nie całej bazy. Konta, alerty, dokumenty, historia redakcyjna i kopie zapasowe nie mają obecnie automatycznego terminu usuwania. Liczniki logowania można usunąć poleceniem administracyjnym po upływie doby od wygaśnięcia. Sesje wygasają po 8 godzinach; usuwanie wygasłych sesji wymaga zadania administracyjnego.</p>
+<h2>Źródła i prawa</h2>
+<p>Obecność źródła w rejestrze nie oznacza zgody na dowolne kopiowanie ani pełnej integracji. Obowiązują warunki wydawcy i licencje konkretnego zasobu. Udostępniane są odnośniki do oryginałów. Nie obchodzimy blokad dostępu. E-mail, SMS i push nie są wysyłane.</p>
+<h2>Lokalne AI</h2>
+<p>Opcjonalny moduł AI analizuje lokalnie tytuł i maksymalnie 5000 znaków zapisanego opisu dokumentu. Nie otrzymuje haseł, kont ani list obserwacji. Szkice, materiał wejściowy i historia decyzji są dostępne redaktorom oraz administratorowi infrastruktury i nie mają automatycznej retencji. Dopiero zatwierdzona przez redaktora ocena trafia do publicznego wątku. Model może się mylić; zgodność cytatu z opisem nie dowodzi poprawności wniosku.</p>
+<h2>Przed publicznym uruchomieniem</h2>
+<p>Operator musi uzupełnić tożsamość i kontakt administratora danych, cele i podstawy przetwarzania, okresy retencji, obsługę wniosków użytkowników oraz warunki wykorzystania źródeł. Ten opis techniczny nie zastępuje polityki prywatności właściwej dla operatora ani audytu prawnego.</p>
+{% endblock %}

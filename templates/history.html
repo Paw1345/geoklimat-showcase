@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Historia — {{ item.title }}</title>
+<style>body{font:17px/1.6 system-ui,sans-serif;background:#f4f6f1;color:#16392f;margin:0}main{max-width:1000px;margin:auto;padding:32px}a{color:#176448}article{background:white;padding:24px;margin:20px 0;border-radius:12px}dd{overflow-wrap:anywhere;margin:0 0 16px}dt{font-weight:bold}</style></head>
+<body><main><a href="/">← Aktualności</a><h1>{{ item.title }}</h1>
+{% if item.metadata.listing_scope == 'ecmwf_ecds_collections' %}
+<section><h2>ECMWF — metadane kolekcji ECDS, nie pobrane prognozy</h2>
+<p>{{ item.metadata.attribution }}. ID: {{ item.metadata.collection_id }}.
+DOI: {{ item.metadata.doi_raw|default:"Nie podano" }}.
+Wskaźnik licencji: {{ item.metadata.license_raw }} — nie potwierdza zgody na pobranie danych.</p>
+<p>Opublikowano wpis katalogowy: {{ item.metadata.catalogue_published_raw|default:"Nie podano" }}.
+Aktualizacja wpisu katalogowego: {{ item.metadata.catalogue_updated_raw|default:"Nie podano" }}.
+To nie czasy obserwacji, uruchomienia modelu ani ważności prognozy.</p>
+<p>Zasięg źródłowy (bez konwersji długości 0–360°): {{ item.metadata.extent_raw }}.
+Przyszła granica czasu nie potwierdza dostępnych plików; brak granicy nie oznacza „teraz”.
+Nie pobrano rastrów/GRIB/NetCDF ani pełnego katalogu ECMWF, nie zweryfikowano maski PL/UE lub historii30dni.</p>
+<p>Ograniczenie dostępu deklarowane przez katalog: {{ item.metadata.disabled_reason_raw|default:"Nie podano" }}.
+Warunki pobrań nie zostały zaakceptowane.
+<a href="{{ item.metadata.download_conditions_url }}" rel="noopener noreferrer">Instrukcja dostępu ECMWF</a>.</p></section>
+{% endif %}
+<p><a href="{{ item.url }}" rel="noopener noreferrer">Otwórz publikację źródłową</a></p>
+{% if item.metadata.listing_scope == 'clms_cdse_collections' %}
+<section><h2>CLMS — opis kolekcji w CDSE, nie pobrane dane</h2>
+<p>{{ item.metadata.attribution }}. <a href="{{ item.metadata.license_url }}" rel="noopener noreferrer">Polityka danych CLMS</a>.</p>
+<p>ID kolekcji: {{ item.metadata.collection_id }}. Wskaźnik licencji dostawcy: {{ item.metadata.license_raw }}.
+Wartości „other” i „proprietary” nie potwierdzają zgody na pobieranie lub redystrybucję plików.
+DOI źródłowy: {{ item.metadata.doi_raw|default:"Nie podano" }}.</p>
+<p>Zakres przestrzenny i czasowy poniżej to deklaracje kolekcji, nie dokładna maska UE,
+czas publikacji ani dowód kompletności pomiarów z ostatnich 30 dni.</p>
+<dl><dt>Bbox źródłowy (długość/szerokość)</dt><dd>{{ item.metadata.extent_raw.spatial.bbox }}</dd>
+<dt>Przedziały czasu źródłowe (null oznacza brak podanej granicy)</dt><dd>{{ item.metadata.extent_raw.temporal.interval }}</dd>
+<dt>Rozdzielczość źródłowa GSD (m)</dt><dd>{{ item.metadata.summaries_raw.gsd|default:"Nie podano" }}</dd>
+<dt>Wybrane charakterystyki źródłowe</dt><dd>{{ item.metadata.summaries_raw }}</dd></dl>
+<p>Monitorujemy kolekcje z wyszukiwania q=clms w CDSE, nie pełny katalog CLMS.
+Formaty i wersje mogą stanowić osobne kolekcje; liczba kolekcji nie jest liczbą produktów ani plików.
+Nie pobrano scen, map, miniatur, rastrów, załączników ani pełnych opisów. Nie wykonano logowania.</p></section>
+{% endif %}
+{% if item.metadata.listing_scope == 'ems_initial_activations' %}
+<section><h2>Copernicus EMS — metadane aktywacji mapowania</h2>
+<p>{{ item.metadata.attribution }} · <a href="{{ item.metadata.terms_url }}">Warunki użycia</a> · <a href="{{ item.metadata.citation_guidelines_url }}">Zasady wskazywania źródła</a>.</p>
+<p>Kod: {{ item.metadata.activation_code }}. Państwa źródłowe: {{ item.metadata.countries_raw|join:", " }}.
+Wybrane państwa UE: {{ item.metadata.matched_eu_countries|join:", " }}. Typ: {{ item.metadata.category_raw.name }}; faza: {{ item.metadata.drm_phase_raw }}.</p>
+<p>Zamknięcie według dostawcy: {% if item.metadata.closed_raw %}tak{% else %}nie{% endif %}.
+Liczba obszarów AOI: {{ item.metadata.n_aois_raw }}; produktów: {{ item.metadata.n_products_raw }} (deklaracje API, nie liczba pobranych plików).</p>
+<p>Czas aktywacji źródłowy: {{ item.metadata.activation_time_raw }}. Ostatnia aktualizacja źródłowa: {{ item.metadata.last_update_raw }}.
+Zachowujemy zapis dostawcy; nie są to daty publikacji. Nie dopisujemy strefy do czasu bez offsetu.</p>
+<p>Pierwsze20 wpisów API, filtrowane po nazwach państw UE27, nie dokładnej masce geograficznej ani pełnym archiwum.
+Aktualny lub zamknięty status mapowania nie potwierdza lokalnego alarmu, zagrożenia teraz ani zakończenia zdarzenia.
+Map, geometrii, rastrów i podstron nie pobrano. Odnośnik źródłowy prowadzi do metadanych JSON aktywacji.</p></section>
+{% endif %}
+{% if item.metadata.listing_scope == 'hys_env_clima_catalogue' %}
+<section><h2>Inicjatywa Have Your Say — ENV/CLIMA</h2>
+<p>Katalog inicjatyw, nie opinie użytkowników ani pełne akty. Odnośnik prowadzi do oficjalnych metadanych JSON Komisji.</p>
+<p>Referencja źródłowa: {{ item.metadata.reference|default:"Nie podano" }}. Status inicjatywy: {{ item.metadata.initiative_status_raw }}. Język tytułu: {{ item.metadata.display_language }}.</p>
+<p>Brak potwierdzonej daty publikacji lub aktualizacji. Status OPEN i terminy poniżej są tekstem dostawcy — nie potwierdzają, że konsultacja jest teraz otwarta. Strefa czasu terminów niepotwierdzona.</p>
+{% for stage in item.metadata.current_statuses_raw %}
+<dl><dt>Etap / status zbierania uwag</dt><dd>{{ stage.frontEndStage }} / {{ stage.receivingFeedbackStatus }}</dd>
+<dt>Źródłowy początek / koniec</dt><dd>{{ stage.feedbackStartDate|default:"Nie podano" }} / {{ stage.feedbackEndDate|default:"Nie podano" }}</dd></dl>
+{% empty %}
+<p>Brak etapów w tej odpowiedzi źródłowej; nie dowodzi braku konsultacji lub ich zakończenia.</p>
+{% endfor %}
+<p>Pełna historia etapów i obowiązywanie prawa niepotwierdzone. Nie pobrano opinii, danych kont ani załączników.</p></section>
+{% endif %}
+{% if item.metadata.listing_scope == 'eea_initial_press_cards' %}
+<section class="card">
+<h2>Zakres komunikatu EEA</h2>
+<p>Pierwsza strona oficjalnej listy HTML; nie pełne archiwum ani katalog raportów. Ten kanał nie pobiera RSS.</p>
+<p>Data publikacji podana na karcie: {{ item.metadata.source_publication_date_text }}. Precyzja dnia, bez osobnej daty aktualizacji.</p>
+<p>Zapisano tytuł i skrót z listy; nie pobrano artykułu ani plików. Komunikat nie potwierdza obowiązywania prawa ani otwartego naboru.</p>
+</section>
+{% endif %}
+{% if item.metadata.listing_scope == 'bdpn_bip_plan' %}
+<article aria-labelledby="bdpn-plan-heading">
+<h2 id="bdpn-plan-heading">BDPN — sekcja Plan ochrony BIP</h2>
+<p>Rodzaj: {{ item.metadata.source_document_type }}. Publikacja w BIP: {{ item.metadata.source_publication_date_text }}.</p>
+{% if item.metadata.source_original_publication_text %}<p>Pierwotna publikacja strony: {{ item.metadata.source_original_publication_text }}. Ostatnia modyfikacja strony: {{ item.metadata.source_last_modification_text }}.</p>{% endif %}
+{% if item.metadata.source_reference_url %}<p><a href="{{ item.metadata.source_reference_url }}" rel="noopener noreferrer">{{ item.metadata.source_reference_title }}</a></p>{% endif %}
+{% if item.metadata.source_file_size_text %}<p>Rozmiar deklarowany: {{ item.metadata.source_file_size_text }}. Nie zweryfikowano bajtów ani zawartości paczki SHP.</p>{% endif %}
+<p>Czasy źródłowe nie podają strefy; zapisujemy publikację z dokładnością do dnia. Data strony, załącznika, aktu i stan mapy to różne informacje.</p>
+<p>Plików i strony ISAP nie pobrano. Obowiązywania prawa nie zweryfikowano; ten kanał nie obejmuje pełnego BIP ani wszystkich konsultacji.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'opn_protection_catalogue' %}
+<article aria-labelledby="opn-documents-heading">
+<h2 id="opn-documents-heading">OPN — katalog dokumentów ochronnych</h2>
+<p>Rodzaj źródłowy: {{ item.metadata.source_document_type }}.</p>
+{% if item.metadata.source_file_size_text %}<p>Rozmiar deklarowany przez park: {{ item.metadata.source_file_size_text }}. Nie zweryfikowano wielkości pliku.</p>{% endif %}
+<p>Katalog nie podaje dat publikacji ani aktualizacji dokumentów. Rok w identyfikatorze aktu nie jest datą publikacji tego wpisu.</p>
+<p>Zapisano metadane i odnośnik; pliku ani strony ISAP nie pobrano. Treści dokumentu i obowiązywania prawa nie zweryfikowano.</p>
+<p>To wybrany katalog dokumentów działalności ochronnej, nie pełny BIP, konsultacje lub archiwum parku.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'opn_initial_news_cards' %}
+<article aria-labelledby="opn-heading">
+<h2 id="opn-heading">Ojcowski Park Narodowy — aktualność</h2>
+<p>Data publikacji źródłowej: {{ item.metadata.source_publication_date_text }}. Brak osobnej daty aktualizacji.</p>
+<p>Monitorujemy pierwszą stronę aktualności: tytuły i skróty, bez pełnych artykułów, zdjęć, załączników i archiwum.</p>
+<p>BIP, plany ochrony i konsultacje wymagają osobnego konektora. Wpis nie potwierdza obowiązującego stanu prawnego ani otwartego naboru.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'bdpn_initial_news_cards' %}
+<article aria-labelledby="bdpn-heading">
+<h2 id="bdpn-heading">Bieszczadzki Park Narodowy — aktualność</h2>
+<p>Data publikacji źródłowej: {{ item.metadata.source_publication_date_text }}. Brak osobnej daty aktualizacji.</p>
+<p>Monitorujemy pierwszą stronę aktualności: tytuły i skróty, bez pełnych artykułów, zdjęć, załączników i archiwum.</p>
+<p>BIP, plany ochrony i konsultacje wymagają osobnego konektora. Wpis nie potwierdza obowiązującego stanu prawnego ani otwartego naboru.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'imgw_official_rss' %}
+<article aria-labelledby="imgw-heading">
+<h2 id="imgw-heading">IMGW-PIB — wiadomość z oficjalnego RSS</h2>
+<p>Data publikacji podana przez RSS: {{ item.metadata.source_publication_date_text }}. Źródło nie podaje osobnej daty aktualizacji.</p>
+<p>Kategorie źródłowe: {{ item.metadata.source_categories|join:", " }}.</p>
+<p>Zapisujemy wyłącznie metadane wiadomości. Treści artykułów przekazanych w RSS nie zapisano; stron szczegółowych, obrazów i załączników nie pobrano.</p>
+<p>Wpis nie jest pomiarem, potwierdzonym ostrzeżeniem pogodowym ani potwierdzeniem otwartego naboru. Kanał nie obejmuje pełnego archiwum IMGW.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'dg_environment_thematic_groups' %}
+<article aria-labelledby="environment-heading">
+<h2 id="environment-heading">DG Environment — {{ item.metadata.source_category }}</h2>
+<p>{% if item.metadata.source_index_role == 'group' %}Grupa tematyczna{% else %}Temat w grupie{% endif %} oficjalnego indeksu środowiskowego.</p>
+{% if item.summary %}<p>Opis z karty grupy źródłowej: {{ item.summary }}</p>{% endif %}
+<p>Katalog nie podaje dat publikacji ani aktualizacji. Nie wywnioskowano ich z nazw strategii i celów.</p>
+<p>Strony docelowej i pełnych dokumentów nie pobrano. Odsyłacz nie potwierdza aktualnego stanu prawnego ani otwartego naboru; może prowadzić do innego oficjalnego portalu UE. Kanał nie obejmuje wszystkich wiadomości ani pełnego katalogu prawa.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'dg_clima_areas_action_cards' %}
+<article aria-labelledby="clima-heading">
+<h2 id="clima-heading">DG CLIMA — {{ item.metadata.source_category }}</h2>
+<p>Opis z karty oficjalnego katalogu Areas of action: {{ item.summary }}</p>
+<p>Katalog nie podaje dat publikacji ani aktualizacji kart. Nie wywnioskowano ich z celów lub lat wymienionych w opisie.</p>
+<p>Strony docelowej i pełnych dokumentów nie pobrano. Opis nie jest niezależną weryfikacją treści, analizą stanu prawnego ani potwierdzeniem otwartego naboru; odsyłacz może prowadzić do innego oficjalnego portalu UE.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'cbd_initial_update_tabs' %}
+<article aria-labelledby="cbd-heading">
+<h2 id="cbd-heading">CBD — {{ item.metadata.source_document_type }}</h2>
+<dl><dt>Data publikacji podana na karcie</dt><dd>{{ item.metadata.source_publication_date_text|default:"Nie podano — nie wywnioskowano z tytułu lub adresu." }}</dd>
+{% if item.metadata.source_record_id %}<dt>Identyfikator źródłowy</dt><dd>{{ item.metadata.source_record_id }}</dd>{% endif %}
+{% if item.metadata.source_citation %}<dt>Oznaczenie rekomendacji/decyzji</dt><dd>{{ item.metadata.source_citation }}</dd>{% endif %}</dl>
+<p>Początkowe karty czterech zakładek Updates. PDF-ów, pełnych dokumentów i archiwum nie pobrano. Tytuły mogą być skrócone przez źródło.</p>
+<p>Odsyłacz rekomendacji/decyzji prowadzi do strony spotkania, nie musi prowadzić do konkretnego dokumentu. Wpis nie potwierdza stanu prawnego ani otwartego naboru. Wydarzenie nie jest datowaną publikacją.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'unep_landing_cards' %}
+<article aria-labelledby="unep-heading">
+<h2 id="unep-heading">UNEP — {{ item.metadata.source_document_type }}</h2>
+<p>Data podana na karcie: {{ item.metadata.source_publication_date_text }}. Zapis z precyzją dnia; nie jest datą aktualizacji ani wejścia przepisów w życie.</p>
+<p>Metadane czterech sekcji strony News, Stories &amp; Speeches. Pełnego tekstu, filmów, obrazów i archiwum nie pobrano; wpis nie jest analizą raportu ani potwierdzeniem otwartego naboru.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'ipcc_initial_report_cards' %}
+<article aria-labelledby="ipcc-heading">
+<h2 id="ipcc-heading">Katalog raportów IPCC</h2>
+<dl><dt>Rodzaj raportu podany przez źródło</dt><dd>{{ item.metadata.source_report_type }}</dd>
+<dt>Miesiąc i rok podane na karcie</dt><dd>{{ item.metadata.source_report_period_text }}</dd></dl>
+<p>Katalog obejmuje także zapowiedziane raporty. Termin na karcie nie potwierdza publikacji ani dostępności pełnego raportu. Nie wywnioskowano dziennej daty publikacji.</p>
+<p>Metadane początkowych kart katalogu, bez PDF-ów, stron szczegółowych i pełnego archiwum; nie analiza treści raportu.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'gus_environment_energy_topic_tables' %}
+<article aria-labelledby="gus-heading">
+<h2 id="gus-heading">Katalog GUS — {{ item.metadata.source_category }}</h2>
+<dl><dt>Rodzaj dokumentu</dt><dd>{{ item.metadata.source_document_type|default:"Nie podano" }}</dd>
+<dt>Data publikacji podana w katalogu</dt><dd>{{ item.metadata.source_publication_date_text }}</dd></dl>
+<p>Dotychczasowy portal GUS: metadane katalogu, bez PDF-ów, stron archiwum i danych liczbowych. Rok lub okres w tytule nie jest datą publikacji ani potwierdzeniem aktualności danych.</p>
+<p><a href="{{ item.metadata.successor_portal_url }}" rel="noopener noreferrer">Nowy portal GUS</a> — przeniesienie tego katalogu nie zostało jeszcze zweryfikowane.</p>
+</article>
+{% endif %}
+{% if item.metadata.listing_scope == 'active_station_catalogue' %}
+<article aria-labelledby="station-heading">
+<h2 id="station-heading">Stacja GIOŚ — {{ item.metadata.station_code }}</h2>
+<p>{{ item.metadata.source_attribution }}. Lista aktywnych stacji — metadane, nie bieżące wyniki pomiarów.</p>
+<p>Współrzędne źródłowe WGS84: {{ item.metadata.latitude_raw }}, {{ item.metadata.longitude_raw }}.</p>
+{% if item.metadata.access_policy == 'approved-gios-stations-api-exception-2026-10-01' %}
+<p>Dostęp na podstawie zatwierdzonego wyjątku dla oficjalnego API listy stacji: robots.txt przekierowuje do strony głównej HTTP. Nie jest to potwierdzenie zgody z robots.txt. Inne endpointy nie są objęte wyjątkiem.</p>
+{% endif %}
+<p><a href="{{ item.metadata.api_documentation }}" rel="noopener noreferrer">Dokumentacja API GIOŚ</a> · <a href="{{ item.metadata.source_terms }}" rel="noopener noreferrer">Warunki wykorzystania danych</a></p>
+</article>
+{% endif %}
+{% if item.metadata.record_kind == 'legal_register_metadata' and item.metadata.source_register_id == '21328136' %}
+<article aria-labelledby="journal-heading">
+<h2 id="journal-heading">Dziennik Urzędowy MKiŚ — {{ item.metadata.journal_year }}, poz. {{ item.metadata.journal_position }}</h2>
+<dl>
+<dt>Data ogłoszenia podana w rejestrze</dt><dd>{{ item.metadata.source_publication_date_text }}</dd>
+<dt>Data wydania aktu</dt><dd>{{ item.metadata.source_issue_date_text }}</dd>
+<dt>Data wejścia w życie podana w rejestrze</dt><dd>{{ item.metadata.source_effective_date_text|default:"Nie podano — nie wywnioskowano z daty ogłoszenia." }}</dd>
+</dl>
+<p>Metadane oficjalnego rejestru, nie analiza pełnego aktu. PDF-ów i podpisów elektronicznych nie pobrano ani nie zweryfikowano. Wpis nie potwierdza aktualnego stanu prawnego; archiwum sprzed 1 lipca 2026 nie jest objęte tym kanałem.</p>
+</article>
+{% endif %}
+{% if item.metadata.record_kind == 'procedure_snapshot' and item.metadata.procedure_reference == '2025/0393(COD)' %}
+<article aria-labelledby="procedure-heading">
+<h2 id="procedure-heading">Procedura INSPIRE — {{ item.metadata.procedure_reference }}</h2>
+<p>Status podany przez OEIL: <strong>{{ item.metadata.procedure_status_text }}</strong>.</p>
+<p>Migawka metadanych Parlamentu Europejskiego. Daty poniżej nie są datami publikacji ani wejścia prawa w życie. Dokumentów nie pobrano.</p>
+<h3>Wydarzenia podane przez źródło</h3>
+<ul>{% for event in item.metadata.source_events %}<li><time datetime="{{ event.date }}">{{ event.source_date_text }}</time> — {{ event.label }}{% if event.reference %} · {{ event.reference }}{% endif %}</li>{% empty %}<li>Brak wydarzeń podanych przez źródło.</li>{% endfor %}</ul>
+<h3>Terminy planowane — nie potwierdzone wydarzenia</h3>
+<ul>{% for forecast in item.metadata.source_forecasts %}<li><time datetime="{{ forecast.date }}">{{ forecast.source_date_text }}</time> — {{ forecast.label }}</li>{% empty %}<li>Brak prognoz podanych przez źródło.</li>{% endfor %}</ul>
+<p>Bezpośredni kolektor EUR-Lex może być niedostępny; ten kanał obejmuje wyłącznie status, wydarzenia i prognozy jednej procedury, nie pełny zakres EUR-Lex.</p>
+</article>
+{% endif %}
+<h2>Wątki zmian</h2><ul>{% for thread in change_threads %}<li><a href="{% url 'change_detail' thread.pk %}">{{ thread.display_title }}</a></li>{% empty %}<li>Brak aktualnego powiązania z wątkiem.</li>{% endfor %}</ul>
+<p>Obserwowanie i szkice AI działają w obrębie wątku. Wiadomości bez identyfikatora procesu wymagają jawnego powiązania przez redaktora.</p>
+{% if perms.ingestion.edit_change_threads %}<p><a href="{% url 'change_create' %}?item={{ item.pk }}">Utwórz wątek z tego dokumentu</a> lub <a href="{% url 'change_catalog' %}">znajdź istniejący wątek</a> i dołącz dokument o ID {{ item.pk }} z uzasadnieniem.</p>{% endif %}
+{% if item.metadata.source_link_warning %}<p><strong>Odnośnik wymaga sprawdzenia:</strong> {{ item.metadata.source_link_warning }}</p>{% endif %}
+<h2>Zapisany opis</h2>{% if item.has_description %}<p>{{ item.summary }}</p>{% else %}<p>Brak opisu źródłowego. Sam tytuł nie wystarcza do analizy AI.</p>{% if item.summary %}<p>Wartość podana przez źródło: <code>{{ item.summary }}</code></p>{% endif %}{% endif %}
+{% if item.metadata.description_detail %}<p>Fragment podstrony źródłowej (maks. 600 znaków), pobrany {{ item.metadata.description_detail.fetched_at }}. Nie jest streszczeniem AI ani pełnym tekstem. Podstrona nie jest automatycznie odświeżana; data pobrania nie oznacza daty publikacji.</p>{% endif %}
+{% if item.metadata.related_description %}
+<h2>Powiązany komunikat MKiŚ</h2>
+<p><a href="{{ item.metadata.related_description.url }}" rel="noreferrer">{{ item.metadata.related_description.title }}</a></p>
+<blockquote>{{ item.metadata.related_description.excerpt }}</blockquote>
+<p>Fragment innej publikacji wskazanej przez tę stronę katalogową, maks. 600 znaków. Pobrano {{ item.metadata.related_description.fetched_at }}. Nie jest opisem katalogu ani pełnym dokumentem; nie jest przekazywany automatycznie do AI. Nie potwierdza, że konsultacje nadal trwają. Brak automatycznego odświeżania.</p>
+{% endif %}
+<p>Wydawca: {{ item.publisher }}. Autorzy: {{ item.authors|join:", "|default:"niepodani" }}. Dokładność daty: {{ item.date_precision }}.</p>
+{% if item.classification %}<h2>Dlaczego ta klasyfikacja?</h2><p>{{ item.classification.state_label }} · {{ item.classification.kind }}. Punkty dopasowania: {{ item.classification.score }}/100 (nie prawdopodobieństwo). Reguły: {{ item.classification.rule_version }}.</p><p>{{ item.classification.topic_labels|join:" · " }}</p><ul>{% for reason in item.classification.evidence %}<li>{{ reason.topic }} {{ reason.rule }}: {{ reason.match }} {{ reason.explanation }} {% if reason.field %}({{ reason.field }}){% endif %}</li>{% endfor %}</ul>{% if item.classification.manual_state %}<p>Decyzja redakcyjna: {{ item.classification.review_note }}. Ma pierwszeństwo przed oceną automatyczną.</p>{% endif %}<p>Klasyfikacja dotyczy tytułu i fragmentu; nie potwierdza statusu prawnego ani wejścia w życie.</p>{% endif %}
+<h2>Powiązane rekordy</h2><p>{{ item.publication.primary_note }}</p>
+<ul>{% for member in members %}<li><a href="{% url 'item_history' member.pk %}">{{ member.source.name }} — {{ member.title }}</a></li>{% endfor %}</ul>
+<h2>Historia tego rekordu</h2><p>Przechowujemy metadane i pobrany fragment, nie pełne archiwum strony. Wersja bazowa przedstawia stan w chwili uruchomienia historii.</p>
+{% if legal_links %}<h2>Procesy i terminy</h2><ul>{% for link in legal_links %}<li><a href="{% url 'legal_detail' link.process_id %}">{{ link.process.identifier }} — {{ link.process.title }}</a> · {{ link.get_origin_display }}{% if not link.is_current %} · źródło zmienione — do kontroli{% endif %}</li>{% endfor %}</ul>{% endif %}
+{% for version in versions %}<article><h3>Wersja {{ version.number }} · {{ version.observed_at|date:"d.m.Y H:i" }}</h3><p>Tryb: {{ version.origin }}. Zmienione pola: {{ version.changed_fields|join:", " }}</p><details><summary>Stan zapisany w tej wersji</summary><dl>{% for key,value in version.snapshot.items %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></details></article>{% empty %}<p>Rekord oczekuje na normalizację.</p>{% endfor %}
+{% if versions.has_previous %}<a href="?page={{ versions.previous_page_number }}">Nowsze</a>{% endif %} Strona {{ versions.number }} / {{ versions.paginator.num_pages }} {% if versions.has_next %}<a href="?page={{ versions.next_page_number }}">Starsze</a>{% endif %}
+</main></body></html>

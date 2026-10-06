@@ -1,0 +1,19 @@
+{% extends "registry_base.html" %}
+{% block title %}Jakość danych — GeoKlimat{% endblock %}
+{% block content %}<h1>Jakość i pokrycie danych</h1>
+<p><a href="{% url 'registry_readiness' %}">Gotowość operacyjna całego rejestru — kanały, dane i pliki</a></p>
+<p>Raport administratora, stan {{ report.generated_at }}. <a href="?format=json">Wersja JSON</a>. Odczyt nie uruchamia pobierania ani napraw.</p>
+<dl>
+<dt>Źródła aktywne / wszystkie</dt><dd>{{ report.sources_active }} / {{ report.sources_total }}</dd>
+<dt>Aktywne źródła z błędami</dt><dd>{{ report.sources_with_failures }}</dd>
+<dt>Aktywne źródła bez aktualnego sukcesu</dt><dd>{{ report.sources_stale }} — brak sukcesu albo więcej niż maksimum z 24 godzin i trzech interwałów pobierania.</dd>
+<dt>Aktywne źródła bez notatki o ponownym wykorzystaniu</dt><dd>{{ report.sources_missing_reuse_notes }} — notatka sama w sobie nie jest potwierdzeniem licencji.</dd>
+<dt>Dokumenty</dt><dd>{{ report.items_total }}</dd>
+<dt>Bez opisu źródłowego</dt><dd>{{ report.items_without_description }} — puste pole lub sam znacznik „-”, „–”, „—”, „...” albo „…”. Nie oznacza braku treści na podstronie wydawcy.</dd>
+<dt>Bez daty publikacji</dt><dd>{{ report.items_without_publication_date }} — brak metadanej, nie automatycznie błąd źródła.</dd>
+<dt>Bez klasyfikacji</dt><dd>{{ report.items_without_classification }}</dd>
+<dt>Bieżące oceny wpływu ze zmienionym dokumentem źródłowym</dt><dd>{{ report.impacts_changed_source }} — ten licznik porównuje skrót dokumentu, nie wszystkie przyczyny utraty aktualności.</dd>
+</dl>
+<h2>Rejestr źródeł — stany integracji</h2><ul>{% for state, count in report.registry_states.items %}<li>{{ state }}: {{ count }}</li>{% endfor %}</ul>
+<p>To wskaźniki techniczne, nie ocena poprawności prawnej ani kompletności PL/UE. EPIC 4.5 pozostaje otwarty z udokumentowanymi brakami.</p>
+{% endblock %}

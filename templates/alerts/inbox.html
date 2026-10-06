@@ -1,0 +1,12 @@
+{% extends "registry_base.html" %}
+{% block title %}Alerty — GeoKlimat{% endblock %}
+{% block content %}
+<h1>Twoja skrzynka alertów</h1>
+<p>Nieprzeczytane: {{ unread_count }}. <a href="{% url 'alert_preferences' %}">Ustawienia</a> · <a href="?">Wszystkie</a> · <a href="?unread=1">Nieprzeczytane</a></p>
+<p>Zmiany obserwowanych wątków od rozpoczęcia obserwacji. Wykrywanie w cyklu harmonogramu, nie w czasie rzeczywistym. Podsumowania są dostępne tutaj; e-mail nie jest włączony.</p>
+{% for notice in notifications %}<article>
+<h2><a href="{% url 'alert_detail' notice.pk %}">{{ notice.title }}</a></h2>
+<p>{{ notice.get_kind_display }} · {{ notice.created_at }} · {% if notice.read_at %}Przeczytane{% else %}Nowe{% endif %}</p>
+</article>{% empty %}<p>Brak alertów. <a href="/changes/">Wybierz wątek do obserwowania</a>. Pierwszy zapis nie powiadamia o archiwum.</p>{% endfor %}
+<p>{% if notifications.has_previous %}<a href="?page={{ notifications.previous_page_number }}&amp;unread={% if unread %}1{% endif %}">Poprzednia</a>{% endif %} {{ notifications.number }} / {{ notifications.paginator.num_pages }} {% if notifications.has_next %}<a href="?page={{ notifications.next_page_number }}&amp;unread={% if unread %}1{% endif %}">Następna</a>{% endif %}</p>
+{% endblock %}

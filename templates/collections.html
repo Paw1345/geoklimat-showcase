@@ -1,0 +1,47 @@
+{% extends "registry_base.html" %}
+{% block title %}GeoKlimat — kolekcje i katalogi{% endblock %}
+{% block content %}
+<h1>Kolekcje i katalogi danych</h1>
+<p>Lokalne rekordy kolekcji z zatwierdzonych źródeł. To metadane, nie pobrane pomiary,
+sceny ani pliki. Licznik rekordów nie jest liczbą unikatowych produktów: ten sam zasób
+może występować w kilku kanałach. Katalog może mieć wpisy historyczne.</p>
+<p>DOI i identyfikator są wyświetlane tylko, gdy zapisano je w osobnych polach.
+Brak zapisanej wartości nie dowodzi jej braku u dostawcy. Licencja to surowy wskaźnik,
+nie zatwierdzona zgoda na pobranie lub redystrybucję danych.</p>
+<form method="get">{{ form.as_p }}<button>Filtruj</button></form>
+{% if result %}
+<p>{{ result.local_filtered_total }} lokalnych rekordów spełnia filtry.
+Strona {{ result.page }} z {{ result.pages }}, maks. {{ result.page_size }} rekordów.
+Odczyt: {{ result.as_of }}. Eksport dotyczy wyłącznie tej strony.</p>
+<p><a href="{{ links.json }}">Eksport JSON tej strony</a> ·
+<a href="{{ links.csv }}">Eksport CSV tej strony</a></p>
+{% if result.has_previous %}<a href="{{ links.previous }}">← Poprzednia strona</a>{% endif %}
+{% if result.has_next %}<a href="{{ links.next }}">Następna strona →</a>{% endif %}
+{% for row in result.records %}
+<article><h2><a href="{% url 'item_history' row.item_id %}">{{ row.title }}</a></h2>
+<p>{{ row.source_name }} · harmonogram {% if row.source_enabled %}włączony{% else %}wyłączony{% endif %}.
+Ostatni sukces źródła: {{ row.source_last_success_at|default:"Nie potwierdzono" }}.
+Ostatnie zobaczenie wpisu: {{ row.last_seen_at }}.</p>
+<dl><dt>Identyfikator dostawcy</dt><dd>{{ row.provider_identifier|default:"Brak osobno zapisanego ID" }}
+{% if row.identifier_field %} (pole {{ row.identifier_field }}){% endif %}</dd>
+<dt>DOI / wskaźnik licencji</dt><dd>{{ row.doi_raw|default:"DOI nie zapisano" }} /
+{{ row.license_indicator_raw|default:"Licencji nie zapisano" }}</dd>
+<dt>Daty źródłowe — bez ujednolicania znaczenia</dt>
+<dd>Publication: {{ row.publication_date_raw|default:"Nie zapisano" }};
+updated: {{ row.updated_date_raw|default:"Nie zapisano" }};
+dataset_modified: {{ row.dataset_modified_raw|default:"Nie zapisano" }}.
+Nie są automatycznie czasem pomiaru lub ważności prognozy.</dd>
+<dt>Zasięg kolekcji</dt><dd>{{ row.extent_raw|default:"Nie zapisano" }}.
+Surowy zapis dostawcy, bez konwersji 0–360°, wycinania lub weryfikacji maski PL/UE.
+Przyszła granica nie potwierdza dostępnego pliku; null nie oznacza „teraz”.</dd>
+<dt>Zakres importera / zapisany hash</dt><dd>{{ row.listing_scope|default:"Nie zapisano" }} /
+{{ row.content_hash_recorded }}. Hash nie został ponownie obliczony przez ten panel.</dd></dl>
+<p><a href="{{ row.source_url }}" rel="noopener noreferrer">Otwórz źródłową referencję</a> ·
+<a href="{% url 'item_history' row.item_id %}">Historia i szczegóły</a></p>
+</article>
+{% empty %}<p>Brak lokalnych rekordów dla tych filtrów. To nie dowód braku danych u dostawcy.</p>{% endfor %}
+<p>Panel nie wykonuje HTTP, nie zleca pobrań, nie zapisuje danych ani nie zmienia harmonogramów.
+Każda strona jest spójnym lokalnym odczytem; oddzielne strony nie tworzą snapshotu dostawcy.
+Nie potwierdza pełnego katalogu, historii30dni, jednostek ani dokładnego zasięgu PL/UE.</p>
+{% endif %}
+{% endblock %}

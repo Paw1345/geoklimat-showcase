@@ -1,0 +1,14 @@
+{% extends "registry_base.html" %}{% block content %}
+<h1>Kompletność i dostępność przebiegów PIG</h1>
+{% if user.is_staff %}<p><a href="{% url 'spatial_search' %}">Przeszukaj dostępne kopie według obszaru WGS84</a></p>{% endif %}
+<p>Stan na {{ as_of }} · <a href="{% url 'data_catalog' %}">Wszystkie kanały danych</a>.</p>
+<p>Rozdzielamy odczyt zbioru i dostępność lokalnych kopii. Panel używa wyłącznie metadanych, bez zapytań do dostawców oraz bez sprawdzania wszystkich payloadów. Liczniki nie potwierdzają integralności ani pełnego pokrycia instytucji.</p>
+<div class="scroll"><table><thead><tr><th scope="col">Kanał</th><th scope="col">Przebieg</th><th scope="col">Odczytane obiekty / spis</th><th scope="col">Dostępne kopie</th><th scope="col">Pokrycie według metadanych</th></tr></thead><tbody>
+{% for row in rows %}<tr><td><a href="{% url 'data_detail' row.channel.pk %}">{{ row.channel.name }}</a></td>
+{% if row.report %}<td>#{{ row.report.harvest_id }} · {{ row.report.status }}</td><td>{{ row.report.read_records }} / {{ row.report.source_count|default_if_none:"nieznany" }}</td><td>{{ row.report.available_pages }} / {{ row.report.read_pages }} stron · {{ row.report.available_records }} obiektów</td><td>{% if row.report.issues %}Niespójne metadane — przegląd operatora{% elif row.report.full_metadata_coverage %}Przebieg ukończony, wszystkie kopie niewygasłe{% elif row.report.scan_complete %}Przebieg ukończony, kopie niepełne{% else %}Przebieg nieukończony{% endif %}</td>
+{% else %}<td colspan="4">Brak zapisanego przebiegu</td>{% endif %}</tr>{% empty %}<tr><td colspan="5">Brak skonfigurowanych kanałów PIG ze spisem identyfikatorów.</td></tr>{% endfor %}
+</tbody></table></div>
+<p>Ukończenie oznacza odczyt przypiętego spisu OBJECTID, nie jednoczasową wersję danych. Po 30 dniach kopie mogą wygasnąć, choć historyczny przebieg nadal ma status complete. Eksporty pojedynczych kopii obejmują jedną stronę.</p>
+<p>Operator może zweryfikować dostępne payloady, SHA-256, geometrie i spis poleceniem <code>python manage.py data_coverage --verify-payloads</code>. To odczyt lokalnych kopii bez HTTP, zmian danych i resetu postępu; wynik dotyczy chwili wykonania.</p>
+<p>Scalony eksport ukończonego przebiegu jest dostępny na karcie dla staff, po sprawdzeniu integralności i limitu rozmiaru. Zbiory ponad limit pozostają dostępne jako pojedyncze strony; pełne pokrycie kopii nie gwarantuje możliwości pobrania jednego pliku.</p>
+{% endblock %}

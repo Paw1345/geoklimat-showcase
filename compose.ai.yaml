@@ -1,0 +1,54 @@
+# Optional overlay: docker compose -f compose.yaml -f compose.ai.yaml ...
+services:
+  web:
+    environment:
+      LOCAL_AI_ENABLED: "1"
+    networks: [default, ai_private]
+  ollama:
+    image: ollama/ollama:0.34.4
+    environment:
+      OLLAMA_NO_CLOUD: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    volumes:
+      - ai_models:/root/.ollama
+    networks: [ai_private]
+    mem_limit: 8g
+    cpus: 4
+    restart: unless-stopped
+  ai-download:
+    image: ollama/ollama:0.34.4
+    profiles: [ai-setup]
+    environment:
+      OLLAMA_NO_CLOUD: "1"
+    volumes:
+      - ai_models:/root/.ollama
+      - ./scripts/ai-download.sh:/setup.sh:ro
+    entrypoint: ["/bin/sh", "/setup.sh"]
+    networks: [default]
+  ai-worker:
+    build:
+      context: .
+      target: development
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      POSTGRES_DB: ${POSTGRES_DB:-geoklimat}
+      POSTGRES_USER: ${POSTGRES_USER:-geoklimat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+      POSTGRES_HOST: db
+      LOCAL_AI_ENABLED: "1"
+    command: python manage.py local_ai_worker
+    volumes:
+      - .:/app
+    networks: [default, ai_private]
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+networks:
+  ai_private:
+    internal: true
+volumes:
+  ai_models:

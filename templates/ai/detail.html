@@ -1,0 +1,19 @@
+{% extends "registry_base.html" %}{% block title %}Szkic AI #{{ draft.pk }} — GeoKlimat{% endblock %}
+{% block content %}<p><a href="{% url 'ai_catalog' %}">← Szkice AI</a> · <a href="{% url 'change_detail' draft.thread_id %}">Wątek</a></p>
+<h1>Szkic AI #{{ draft.pk }}</h1>
+<p>Status: {{ draft.state }} · {{ draft.model_name }} · {{ draft.prompt_version }} · {{ draft.created_at }}. Autor zlecenia: {{ draft.created_by }}.</p>
+{% if not current %}<p role="alert">Źródło zmieniło się lub nie należy już do wątku. Nie zatwierdzaj starego szkicu.</p>{% endif %}
+{% if draft.error %}<p role="alert">{{ draft.error }}</p>{% endif %}
+<h2>Materiał przekazany lokalnemu modelowi</h2><p><a href="{% url 'item_history' draft.item_id %}">{{ draft.input_data.title }}</a></p>
+<blockquote>{{ draft.input_data.summary|linebreaksbr }}</blockquote>{% if draft.input_data.truncated %}<p>Opis skrócony do 5000 znaków.</p>{% endif %}
+<p>Model nie czyta całego aktu. Instrukcje wewnątrz źródła są niezaufaną treścią. Prawdziwość wniosków musi sprawdzić człowiek.</p>
+{% if draft.output %}<h2>Streszczenie AI — niezweryfikowane automatycznie</h2><p>{{ draft.output.summary }}</p>
+{% if not draft.output.kinds %}<p>Model nie wskazał potwierdzonej kategorii wpływu. Nie wybieraj kategorii bez dowodu w źródle; taki szkic można odrzucić. Publikacja oceny nadal wymaga uzasadnionej kategorii wybranej przez redaktora.</p>{% endif %}
+<h3>Proponowana zmiana</h3><p>{{ draft.output.change }}</p><h3>Kogo dotyczy</h3><p>{{ draft.output.audience }}</p><h3>Cytat źródłowy</h3><blockquote>{{ draft.output.quote }}</blockquote>{% endif %}
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if draft.state == "ready" %}
+{% if current %}<h2>Weryfikacja redakcyjna</h2><p>Sprawdź oryginał, popraw pola i dowód. Zatwierdzenie opublikuje ocenę wpływu w wątku pod Twoim autorstwem; nie publikuje automatycznie streszczenia.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button name="action" value="approve">Sprawdziłem źródło — opublikuj ocenę</button></form>{% endif %}
+<form method="post">{% csrf_token %}<button name="action" value="reject">Odrzuć szkic</button></form>
+{% elif draft.state == "queued" or draft.state == "running" %}<p>Analiza czeka lub trwa. Odśwież stronę po chwili; CPU może potrzebować kilku minut.</p>{% endif %}
+{% if draft.reviewed_by %}<p>Decyzja: {{ draft.reviewed_by }} · {{ draft.reviewed_at }}</p>{% endif %}{% endblock %}

@@ -1,0 +1,546 @@
+{
+  "generated_at": "2026-09-25T12:15:38.865579+00:00",
+  "groups": [
+    {
+      "group": "MKiŚ",
+      "missing": 0,
+      "items": [
+        {
+          "id": 10719,
+          "source": "mkis",
+          "title": "Senat bez poprawek przyjął nowelizację przepisów o odnawialnych źródłach energii",
+          "summary": "24 września 2026 r. Senat jednogłośnie bez poprawek przyjął przygotowaną przez Ministerstwo Klimatu i Środowiska ustawę o zmianie ustawy o odnawialnych źródłach energii (OZE) oraz niektórych innych ustaw (UD332). Nowelizacja przyspieszy rozwój OZE, ułatwi realizację inwestycji oraz umożliwi zwiększenie produkcji biometanu i biogazu. Wprowadza również rozwiązania korzystne dla prosumentów, spółdzielni energetycznych i inwestorów.",
+          "url": "https://www.gov.pl/web/klimat/senat-bez-poprawek-przyjal-nowelizacje-przepisow-o-odnawialnych-zrodlach-energii",
+          "hash": "9700d5837c46f1261ff7fe7b68c9a0e0c71fa049f08563a0244d1fdb7ee0a69a",
+          "published_at": "2026-09-23 22:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Klimat i adaptacja",
+            "Legislacja i konsultacje",
+            "OZE / energia",
+            "Klimat i adaptacja"
+          ]
+        },
+        {
+          "id": 5935,
+          "source": "registry-003",
+          "title": "Konsultacje społeczne dotyczące rozporządzenia Parlamentu Europejskiego i Rady zmieniającego dyrektywę 2003/87/WE w odniesieniu do zmienionych wartości wskaźników emisyjności opartych na cieple i na paliwie na lata 2026-2030",
+          "summary": "",
+          "url": "https://www.gov.pl/web/klimat/konsultacje-spoleczne-dotyczace",
+          "hash": "d85f4fa3d4bbd5608764775093c64d551cb0e9cb573deae5aaf023aa3ce5daf7",
+          "published_at": null,
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Konsultacje",
+          "topics": [
+            "Legislacja i konsultacje"
+          ]
+        },
+        {
+          "id": 10602,
+          "source": "mkis",
+          "title": "Morskie obszary chronione tematem wspólnej debaty nauki, administracji i organizacji społecznych",
+          "summary": "Przedstawiciele administracji publicznej, środowiska naukowego oraz organizacji społecznych spotkali się 23 września 2026 r. podczas konferencji „Morskie obszary chronione - dziś i jutro”, poświęconej ochronie przyrody w polskiej części Bałtyku. Wydarzenie współorganizowane przez Ministerstwo Klimatu i Środowiska oraz Fundację WWF Polska było okazją do wymiany wiedzy i doświadczeń dotyczących ochrony ekosystemów morskich.",
+          "url": "https://www.gov.pl/web/klimat/morskie-obszary-chronione-tematem-wspolnej-debaty-nauki-administracji-i-organizacji-spolecznych",
+          "hash": "af756fd58ce0ab98bfc294cbdd48ff5f6ab3e400964a1597e9a621e30be88dd1",
+          "published_at": "2026-09-22 22:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Klimat i adaptacja",
+            "Przyroda i oceny oddziaływania",
+            "Klimat i adaptacja",
+            "Przyroda / bioróżnorodność"
+          ]
+        },
+        {
+          "id": 5934,
+          "source": "registry-003",
+          "title": "Konsultacje społeczne dotyczące projektu Dyrektywy Parlamentu Europejskiego i Rady zmieniającej dyrektywę 2003/87/WE i decyzję (UE) 2015/1814 w odniesieniu do zwiększania konkurencyjności i racjonalnej pod względem kosztów dekarbonizacji",
+          "summary": "",
+          "url": "https://www.gov.pl/web/klimat/konsultacje-spoleczne-dotyczace-projektu-dyrektywy-parlamentu-europejskiego-i-rady-zmieniajacej-dyrektywe-200387we-i-decyzje-ue-20151814-w-odniesieniu-do-zwiekszania-konkurencyjnosci-i-racjonalnej-pod-wzgledem-kosztow-dekarbonizacji",
+          "hash": "d5da1601389acc195c0a326c1f9e4aaff9aa787a83735955a9894d76f19533e2",
+          "published_at": null,
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Konsultacje",
+          "topics": [
+            "Klimat i adaptacja",
+            "Legislacja i konsultacje",
+            "Klimat i adaptacja"
+          ]
+        },
+        {
+          "id": 10601,
+          "source": "mkis",
+          "title": "Centralne Obchody Dni Lasu w Gołuchowie. Minister Paulina Hennig-Kloska wręczyła odznaki honorowe",
+          "summary": "23 września 2026 r. w Ośrodku Kultury Leśnej w Gołuchowie odbyły się Centralne Obchody Dni Lasu. Podczas uroczystości Minister Klimatu i Środowiska Paulina Hennig-Kloska wręczyła Odznaki Honorowe za Zasługi dla Ochrony Środowiska i Klimatu, dziękując leśnikom, naukowcom oraz społecznikom za ich codzienną pracę na rzecz polskich lasów. Podczas wystąpienia szefowa resortu zwróciła uwagę na otwieranie się Lasów Państwowych na dialog ze społeczeństwem, czego owocem jest m.in. projekt lasów społecznych. Podkreśliła również rolę przyrody w budowaniu bezpieczeństwa państwa.",
+          "url": "https://www.gov.pl/web/klimat/centralne-obchody-dni-lasu-w-goluchowie-minister-paulina-hennig-kloska-wreczyla-odznaki-honorowe",
+          "hash": "a962bce8d0d8dfc992f03105e6926de50138ba5c06e9a19f2292af6251273eda",
+          "published_at": "2026-09-22 22:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Klimat i adaptacja",
+            "Przyroda i oceny oddziaływania",
+            "Klimat i adaptacja",
+            "Przyroda / bioróżnorodność"
+          ]
+        },
+        {
+          "id": 5933,
+          "source": "registry-003",
+          "title": "Kolsultacje publiczne dotyczące sprawozdania Komisji dla Parlamentu Europejskiego i Rady na temat postępów w osiąganiu ogólnounijnego celu dotyczącego mocy zatłaczania CO2",
+          "summary": "",
+          "url": "https://www.gov.pl/web/klimat/kolsultacje-publiczne-dotyczace-sprawozdania-komisji-dla-parlamentu-europejskiego-i-rady-na-temat-postepow-w-osiaganiu-ogolnounijnego-celu-dotyczacego-mocy-zatlaczania-co2",
+          "hash": "fc4677d07a38c6eec56d4516086b4647b33d4517fb524e1884bc92227f89d337",
+          "published_at": null,
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Raport",
+          "topics": [
+            "Obowiązki i sprawozdawczość"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "GIOŚ",
+      "missing": 0,
+      "items": [
+        {
+          "id": 5486,
+          "source": "gios",
+          "title": "Główny Inspektor Ochrony Środowiska Patronem Specjalnym targów POLECO 2026",
+          "summary": "Hanna Kończal, Główny Inspektor Ochrony Środowiska, objęła patronatem specjalnym Międzynarodowe Targi Ochrony Środowiska POLECO, które odbędą się 6-8 października w Poznaniu. Tegoroczna współpraca w ramach patronatu ma szczególny wymiar - w 2026 roku Inspekcja Ochrony Środowiska obchodzi 35-lecie istnienia.",
+          "url": "https://www.gov.pl/web/gios/glowny-inspektor-ochrony-srodowiska-patronem-specjalnym-targow-poleco-2026",
+          "hash": "c0b1ebcab4687768c07ee0e59bb4626aafd97ecf1c7f2b9f05046929aefc9433",
+          "published_at": "2026-09-17 22:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Przyroda i oceny oddziaływania",
+            "Przyroda / bioróżnorodność"
+          ]
+        },
+        {
+          "id": 5485,
+          "source": "gios",
+          "title": "Światowy Dzień Monitoringu Wody. Cztery tysiące punktów monitoringowych pod nadzorem Inspekcji Ochrony Środowiska",
+          "summary": "18 września obchodzimy Światowy Dzień Monitoringu Wody. Akcja ustanowiona została w 2003 roku w celu podnoszenia świadomości społecznej oraz zachęcania do aktywnej ochrony zasobów wodnych. Prowadzenie monitoringu stanowi ważny element diagnozowania stanu środowiska. W Polsce za ocenę stanu wód odpowiada Główny Inspektorat Ochrony Środowiska.",
+          "url": "https://www.gov.pl/web/gios/swiatowy-dzien-monitoringu-wody-cztery-tysiace-punktow-monitoringowych-pod-nadzorem-inspekcji-ochrony-srodowiska",
+          "hash": "2bab5bcf77938474d13333ac1f2b2f095aee77c4966f0380df79c95b8b0ea1db",
+          "published_at": "2026-09-17 22:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Wody",
+            "Przyroda i oceny oddziaływania",
+            "Przyroda / bioróżnorodność"
+          ]
+        },
+        {
+          "id": 5371,
+          "source": "gios",
+          "title": "Postępy w realizacji projektu \"Rozwój i modernizacja systemu badań i oceny jakości wód oraz wzmocnienie potencjału Krajowego Laboratorium Referencyjnego ds. monitoringu wód w zakresie wskaźników biologicznych, fizykochemicznych i chemicznych” w pierwszym półroczu 2026",
+          "summary": "",
+          "url": "https://www.gov.pl/web/gios/postepy-w-realizacji-projektu-rozwoj-i-modernizacja-systemu-badan-i-oceny-jakosci-wod-oraz-wzmocnienie-potencjalu-krajowego-laboratorium-referencyjnego-ds-monitoringu-wod-w-zakresie-wskaznikow-biologicznych-fizykochemicznych-i-chemicznych-w-pierwszym-polroczu-2026",
+          "hash": "77763c95bcb68e95f8c0740bfaf9857013a680cec98aa2403eb865b65d7593b9",
+          "published_at": "2026-06-28 22:00:00+00:00",
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Komunikat",
+          "topics": []
+        },
+        {
+          "id": 5370,
+          "source": "gios",
+          "title": "Inspektorzy GIOŚ na specjalistycznych ćwiczeniach z zakresu przeciwdziałania przestępczości środowiskowej",
+          "summary": "Inspektorzy Głównego Inspektoratu Ochrony Środowiska uczestniczyli w szkoleniu i ćwiczeniach poświęconych przeciwdziałaniu przestępczości środowiskowej oraz wykorzystaniu nowoczesnych technologii w działaniach służb. W wydarzeniu, którego gospodarzem była 15 Lubuska Brygada Obrony Terytorialnej, uczestniczyli także przedstawiciele Komendy Wojewódzkiej Policji w Katowicach, Prokuratury Regionalnej w Katowicach oraz Śląskiego Urzędu Celno-Skarbowego w Katowicach.",
+          "url": "https://www.gov.pl/web/gios/inspektorzy-gios-na-specjalistycznych-cwiczeniach-z-zakresu-przeciwdzialania-przestepczosci-srodowiskowej",
+          "hash": "032f0006bcce48d9e1ead6ed63e414ab2b8b60dfd2afa5da91c2f84af3f9558c",
+          "published_at": "2026-07-08 22:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Monitoring i inspekcja",
+            "Przyroda i oceny oddziaływania",
+            "Przyroda / bioróżnorodność"
+          ]
+        },
+        {
+          "id": 5369,
+          "source": "gios",
+          "title": "Promieniowanie UV-B latem. Sprawdź, co warto wiedzieć",
+          "summary": "W okresie letnim spędzamy więcej czasu na świeżym powietrzu, a tym samym jesteśmy bardziej narażeni na działanie promieniowania ultrafioletowego. Słońce wpływa pozytywnie na nasze zdrowie i nastrój, jednak brak odpowiedniej ochrony może prowadzić do oparzeń skóry i innych niekorzystnych skutków zdrowotnych. W ramach Państwowego Monitoringu Środowiska prowadzone są pomiary natężenia promieniowania UV-B, a także pomiary stanu warstwy ozonowej, która odgrywa kluczową rolę w pochłanianiu promieniowania ultrafioletowego docierającego do powierzchni Ziemi.",
+          "url": "https://www.gov.pl/web/gios/promieniowanie-uv-b-latem-sprawdz-co-warto-wiedziec",
+          "hash": "3f602aae435b559b9f3b94da8b5521e0cf0c56afcf7be36c286438000b113ab7",
+          "published_at": "2026-07-14 22:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Powietrze",
+            "Jakość powietrza"
+          ]
+        },
+        {
+          "id": 5368,
+          "source": "gios",
+          "title": "Jakościowe dane o środowisku na wyciągnięcie ręki. Nowe API GIOŚ już dostępne",
+          "summary": "Od teraz jeszcze więcej jakościowych danych o środowisku dostępnych bezpłatnie dla każdego. W ramach projektu „Dane 3.0 - wymiana, wartość” Główny Inspektorat Ochrony Środowiska udostępnił 8 nowych API (Interfejsów Programowania Aplikacji), które znacząco poszerzają dostęp do danych środowiskowych. API dostępne są pod adresem: https://dane.gios.gov.pl/",
+          "url": "https://www.gov.pl/web/gios/nowe-api-gios-juz-dostepne",
+          "hash": "0010fd923b027774054ea41131b85f9aec9e2121a40fa52fed86f72257427bcf",
+          "published_at": "2026-07-19 22:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Monitoring i inspekcja",
+            "Przyroda i oceny oddziaływania",
+            "Otwarte dane i usługi",
+            "Przyroda / bioróżnorodność",
+            "Otwarte dane i API"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "GUGiK",
+      "missing": 0,
+      "items": [
+        {
+          "id": 10811,
+          "source": "gugik",
+          "title": "Główny Geodeta Kraju na 33 Krajowej Konferencji Rzeczoznawców Majątkowych",
+          "summary": "",
+          "url": "https://www.gov.pl/web/gugik/glowny-geodeta-kraju-na-33-krajowej-konferencji-rzeczoznawcow-majatkowych",
+          "hash": "fd020ec5375333e0ada1c3cd0019c019a99000ca12fb4aea45f18f4a78757389",
+          "published_at": "2026-09-24 22:00:00+00:00",
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Komunikat",
+          "topics": []
+        },
+        {
+          "id": 10814,
+          "source": "registry-010",
+          "title": "Nowe usługi OGC API Features dla danych PRG i PRNG",
+          "summary": "Udostępniliśmy nowe usługi zgodne ze standardem OGC API Features, zapewniające bezpośredni dostęp do obiektów przestrzennych Państwowego Rejestru Granic (PRG) oraz Państwowego Rejestru Nazw Geograficznych (PRNG). OGC API to nowa generacja standardów OGC, zaprojektowana z myślą o aplikacjach internetowych i API. Wykorzystują nowoczesne praktyki tworzenia aplikacji, takie jak JSON, REST i OpenAPI. Standard OGC API Features […]",
+          "url": "https://www.geoportal.gov.pl/aktualnosci/nowe-uslugi-ogc-api-features-dla-danych-prg-i-prng/",
+          "hash": "bc15a68a942000771ddb7746b19fc72f1f2a9673549dddd4f59e0f51dcd50648",
+          "published_at": "2026-09-25 07:14:09+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "GIS i dane przestrzenne",
+            "Otwarte dane i usługi",
+            "Geoportal, geodezja, kartografia",
+            "Otwarte dane i API"
+          ]
+        },
+        {
+          "id": 10712,
+          "source": "gugik",
+          "title": "Porozumienie o współpracy WBZC i GUGiK",
+          "summary": "",
+          "url": "https://www.gov.pl/web/gugik/porozumienie-o-wspolpracy-wbzc-i-gugik",
+          "hash": "2f5a10cc8b9a3eb7068af469ce5255af1d46f059ddd323ec956eeb93141496ba",
+          "published_at": "2026-09-23 22:00:00+00:00",
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "GIS i dane przestrzenne",
+            "Geoportal, geodezja, kartografia"
+          ]
+        },
+        {
+          "id": 10813,
+          "source": "registry-010",
+          "title": "Podlaskie Forum GIS",
+          "summary": "Pod Patronatem Głównego Geodety Kraju w dniach 24-25 września 2026 r. w Ciechanowcu odbywa się XIX Podlaskie Forum GIS pt. „GIS w praktyce”. Jest to coroczne wydarzenie organizowane przez Stowarzyszenie Geodetów Polskich oddział Białystok, Urząd Marszałkowski Województwa Podlaskiego oraz Wojewódzkie Biuro Geodezji skupiające użytkowników systemów informacji geograficznej, przedstawicieli urzędów, instytucji samorządowych oraz jednostek odpowiedzialnych za […]",
+          "url": "https://www.geoportal.gov.pl/aktualnosci/podlaskie-forum-gis/",
+          "hash": "7d6efc6048eeee5976303e50873f10b1132103c0866ef77ae72ba0a0b648075c",
+          "published_at": "2026-09-25 07:18:31+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "GIS i dane przestrzenne",
+            "Geoportal, geodezja, kartografia"
+          ]
+        },
+        {
+          "id": 10711,
+          "source": "gugik",
+          "title": "GGK na XXIV Ogólnopolskim Sympozjum Naukowym „Fotogrametria, teledetekcja i geoinformacja w modelowaniu cyfrowej rzeczywistości”",
+          "summary": "",
+          "url": "https://www.gov.pl/web/gugik/ggk-na-xxiv-ogolnopolskim-sympozjum-naukowym-fotogrametria-teledetekcja-i-geoinformacja-w-modelowaniu-cyfrowej-rzeczywistosci",
+          "hash": "a848e817d0136cf51a6b57ebe083e18a9ab3194c4e83ccdbb605694f47158667",
+          "published_at": "2026-09-23 22:00:00+00:00",
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "GIS i dane przestrzenne",
+            "Geoportal, geodezja, kartografia"
+          ]
+        },
+        {
+          "id": 10812,
+          "source": "registry-010",
+          "title": "Główny Geodeta Kraju na 33 Krajowej Konferencji Rzeczoznawców Majątkowych",
+          "summary": "Główny Geodeta Kraju Andrzej Żylis uczestniczył w 33. Krajowej Konferencji Rzeczoznawców Majątkowych, która odbywa się w dniach 24–25 września 2026 r. w Wiśle. Podczas wystąpienia Główny Geodeta Kraju poruszył temat danych z Rejestru Cen Nieruchomości (RCN), zwracając szczególną uwagę na konsekwencje zniesienia opłat za ich udostępnianie oraz nowe możliwości wykorzystania tych danych przez rzeczoznawców majątkowych. […]",
+          "url": "https://www.geoportal.gov.pl/aktualnosci/glowny-geodeta-kraju-na-33-krajowej-konferencji-rzeczoznawcow-majatkowych/",
+          "hash": "d3812325a96065dae28a06c81112423c083c1b6346b2b601261f6faf2dc48a75",
+          "published_at": "2026-09-25 07:22:11+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Komunikat",
+          "topics": []
+        }
+      ]
+    },
+    {
+      "group": "INSPIRE",
+      "missing": 0,
+      "items": [
+        {
+          "id": 5925,
+          "source": "registry-178",
+          "title": "Training materials available: Re3gistry and INSPIRE Registry",
+          "summary": "On May 2024 we presented an overview of the Re3gistry open source software and its INSPIRE implementation. Find the slides and recordings of the training here.",
+          "url": "https://knowledge-base.inspire.ec.europa.eu/news-and-publications/news/training-materials-available-re3gistry-and-inspire-registry-2024-07-18_en",
+          "hash": "2877e224c870b14690f6822a82a916beb8ff816e676c999bf66b5018c5304422",
+          "published_at": "2024-07-18 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "INSPIRE i interoperacyjność",
+            "INSPIRE i IIP"
+          ]
+        },
+        {
+          "id": 6268,
+          "source": "registry-179",
+          "title": "Directive 2007/2/EC of the European Parliament and of the Council of 14 March 2007 establishing an Infrastructure for Spatial Information in the European Community (INSPIRE)",
+          "summary": "-",
+          "url": "https://knowledge-base.inspire.ec.europa.eu/publications/directive-20072ec-european-parliament-and-council-14-march-2007-establishing-infrastructure-spatial_en",
+          "hash": "713859ad6eb460abc4fc19aa2f4b774a723802713ccb47a1302dae8d821869cd",
+          "published_at": "2007-04-26 00:00:00+00:00",
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "INSPIRE i interoperacyjność",
+            "Legislacja i konsultacje",
+            "INSPIRE i IIP"
+          ]
+        },
+        {
+          "id": 5372,
+          "source": "inspire-gugik",
+          "title": "GUGiK — INSPIRE",
+          "summary": "INSPIRE Prawo Rada IIP Punkt kontaktowy Monitoring Sprawozdawczość Opracowania Materiały szkoleniowe Linki Racjonalne korzystanie z przestrzeni wiąże się z koniecznością posiadania kompleksowej i jednocześnie dostatecznie szczegółowej wiedzy o tej przestrzeni, o znajdujących się w niej obiektach przyrodniczych i antropogenicznych oraz ich relacjach, o także o występujących w niej zjawiskach i zachodzących procesach. Idea INSPIRE (Infrastructure for Spatial Information in Europe) polega na zapewnieniu dostępu do wiedzy o wspólnej przestrzeni europejskiej wszystkim, którzy tej wiedzy potrzebują:",
+          "url": "https://www.gov.pl/web/gugik/inspire2",
+          "hash": "a53a496da40d0ddf0e0480468c2467ff7dfcb56f09d31c8c133d402b00f504bd",
+          "published_at": null,
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Raport",
+          "topics": [
+            "INSPIRE i interoperacyjność",
+            "GIS i dane przestrzenne",
+            "Przyroda i oceny oddziaływania",
+            "Obowiązki i sprawozdawczość",
+            "INSPIRE i IIP",
+            "Geoportal, geodezja, kartografia",
+            "Przyroda / bioróżnorodność"
+          ]
+        },
+        {
+          "id": 5924,
+          "source": "registry-178",
+          "title": "New JRC Report on Green Deal data sharing",
+          "summary": "The report “Unlocking Green Deal Data: Innovative Approaches for Data Governance and Sharing in Europe” explores innovative approaches for unlocking relevant data to achieve the objectives of the European Green Deal.",
+          "url": "https://knowledge-base.inspire.ec.europa.eu/news-and-publications/news/new-jrc-report-green-deal-data-sharing-2024-10-30_en",
+          "hash": "41e2c4488b2f6fb08846d5481fb06245cc8bf210d71e104e8c55c728138bb0f3",
+          "published_at": "2024-10-30 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Raport",
+          "topics": [
+            "Obowiązki i sprawozdawczość"
+          ]
+        },
+        {
+          "id": 6267,
+          "source": "registry-179",
+          "title": "Methodology for the development of data specifications: baseline version (D 2.6, Version 3.0)",
+          "summary": "-",
+          "url": "https://knowledge-base.inspire.ec.europa.eu/publications/methodology-development-data-specifications-baseline-version-d-26-version-30_en",
+          "hash": "8bcba28dd727a4fa282077ec2b4e227b030b59c0fc1b8a67e581547003e409d2",
+          "published_at": "2008-04-07 00:00:00+00:00",
+          "ai_eligible": false,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Komunikat",
+          "topics": []
+        },
+        {
+          "id": 5923,
+          "source": "registry-178",
+          "title": "GreenData4All Public Consultation",
+          "summary": "The European Commission has launched a public consultation as part of the GreenData4All initiative, inviting everyone to share their thoughts on how to improve access to environmental data.",
+          "url": "https://ec.europa.eu/info/law/better-regulation/have-your-say/initiatives/13170-GreenData4All-updated-rules-on-geospatial-environmental-data-and-access-to-environmental-information_en",
+          "hash": "416bb38b7e015dbb2c641d0d3fb92f4289b6ce47b1e9d46a6a885e15aa4db575",
+          "published_at": "2025-02-10 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Konsultacje",
+          "topics": [
+            "INSPIRE i interoperacyjność",
+            "Legislacja i konsultacje",
+            "INSPIRE i IIP"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "UE",
+      "missing": 0,
+      "items": [
+        {
+          "id": 10825,
+          "source": "ec-climate",
+          "title": "EU ETS – Publication of surrender and compliance data",
+          "summary": "The Commission will publish the available surrender and compliance data 2025 on October 6, 2026, at the latest.",
+          "url": "https://climate.ec.europa.eu/news-other-reads/news/eu-ets-publication-surrender-and-compliance-data-2026-09-25_en",
+          "hash": "3cf0acd22a2d6469d4a29e9cc9adf19a3d78e76141227bedeff5c99ce8bd72e8",
+          "published_at": "2026-09-25 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Emisje / ETS / CBAM"
+          ]
+        },
+        {
+          "id": 10718,
+          "source": "ec-environment",
+          "title": "A journey towards a greener future: Vaasa shows the way",
+          "summary": "Vaasa’s Green Leaf year turns sustainability into action: quieter, cleaner park maintenance, better cycling, accessible winter routes, youth-led biodiversity work, community participation and green mobility. Together, these initiatives support a healthier environment and a more sustainable future.",
+          "url": "https://environment.ec.europa.eu/news/journey-towards-greener-future-vaasa-shows-way-2026-09-23_en",
+          "hash": "d2c885549af8f59a86b63271ef127ffa98349180f3df1a650659196df029ff8d",
+          "published_at": "2026-09-23 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Przyroda i oceny oddziaływania",
+            "Przyroda / bioróżnorodność"
+          ]
+        },
+        {
+          "id": 10717,
+          "source": "ec-climate",
+          "title": "Commission publishes terms and conditions for €1 billion industrial heat decarbonisation auction",
+          "summary": "On 24 September 2026, the Commission published the final Terms and Conditions (T&Cs) for its second Europe-wide auction for projects decarbonising industrial process heat (IF26 Heat Auction).",
+          "url": "https://climate.ec.europa.eu/news-other-reads/news/commission-publishes-terms-and-conditions-eur1-billion-industrial-heat-decarbonisation-auction-2026-09-24_en",
+          "hash": "90ef92f5f76738b709d65bbaa2b93a5f4d6de47e75d61d8811a3382e1a2dda13",
+          "published_at": "2026-09-24 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Komunikat",
+          "topics": []
+        },
+        {
+          "id": 9824,
+          "source": "ec-environment",
+          "title": "New Red List shows 1 in 9 moth species could face extinction",
+          "summary": "The newly released report shows that this important but often-overlooked group of pollinators is under increasing pressure.",
+          "url": "https://environment.ec.europa.eu/news/new-red-list-shows-1-9-moth-species-could-face-extinction-2026-09-21_en",
+          "hash": "b726696ab4739f0b67fc80bc5d65ecad96fef38d7e4488e041525d9d026c8452",
+          "published_at": "2026-09-21 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Do oceny",
+          "kind": "Raport",
+          "topics": [
+            "Obowiązki i sprawozdawczość"
+          ]
+        },
+        {
+          "id": 5402,
+          "source": "ec-climate",
+          "title": "Suspension of auctioning of Member States Recovery and Resilience Facility allowances",
+          "summary": "The auction calendar has been adjusted following the suspension of the auctioning of the first leg of emission allowances allocated to the Recovery and Resilience Facility (RRF).",
+          "url": "https://climate.ec.europa.eu/news-other-reads/news/suspension-auctioning-member-states-recovery-and-resilience-facility-allowances-2026-06-22_en",
+          "hash": "fbce1d128c1dc483ae1bc033d9042b6facbc51f170ea076296f3b153603f5d9b",
+          "published_at": "2026-06-22 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Klimat i adaptacja",
+            "Emisje / ETS / CBAM",
+            "Klimat i adaptacja"
+          ]
+        },
+        {
+          "id": 9823,
+          "source": "ec-environment",
+          "title": "Commission launches Water Resilience Stakeholder Platform",
+          "summary": "More than 50 high-level water sector experts gathered in Brussels, aiming to accelerate action on Europe’s water resilience",
+          "url": "https://environment.ec.europa.eu/news/commission-launches-water-resilience-stakeholder-platform-2026-09-21_en",
+          "hash": "c5523db620116b850beabfba09d0176e15a428bb8d3eba850b320b0dd0adf52e",
+          "published_at": "2026-09-21 12:00:00+00:00",
+          "ai_eligible": true,
+          "threads": [],
+          "state": "Trafne",
+          "kind": "Komunikat",
+          "topics": [
+            "Wody"
+          ]
+        }
+      ]
+    }
+  ]
+}

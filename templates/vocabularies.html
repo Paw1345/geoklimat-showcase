@@ -1,0 +1,14 @@
+{% extends "registry_base.html" %}{% block title %}GeoKlimat — słowniki INSPIRE{% endblock %}
+{% block content %}<h1>Wartości słowników INSPIRE — PL/EN</h1>
+<p>Osiem wybranych schematów: tematy INSPIRE, środowisko, wody i gleba. Nie jest to pełny rejestr, EuroVoc ani ocena aktualnego statusu kodów. Etykiety PL pochodzą od dostawcy; przy ich braku wyświetlamy EN, bez automatycznego tłumaczenia. Definicje są w języku EN.</p>
+<form method="get">{{ form.as_p }}<button>Filtruj zapisane wartości</button></form>
+{% if source %}<p>Kanał: {{ source.name }} · {% if source.enabled and source.activation_approved %}aktywny{% else %}wyłączony{% endif %} · ostatni udany import {{ source.last_success_at|default:"brak" }}.</p><p>{{ source.scope }}</p>{% else %}<p>Kanał nie został jeszcze skonfigurowany.</p>{% endif %}
+<p>Otwarcie strony i eksport czytają tylko bazę, bez pobierania URI. Dat publikacji nie znamy; czas importu nie jest datą zmiany wartości u dostawcy. 35 wpisów tematów w odpowiedzi nie oznacza 35 obecnie obowiązujących tematów dyrektywy — statusów nie pobieramy.</p>
+{% if items %}<p>Zapisanych wartości pasujących do filtra: {{ items.paginator.count }}.</p>{% endif %}
+{% for item in items %}<article><h2><a href="{% url 'item_history' item.pk %}">{{ item.title }}</a></h2>
+<p>{{ item.metadata.scheme_label }} · nazwa wyświetlana: {{ item.metadata.display_language }}</p>
+<dl><dt>PL</dt><dd>{{ item.metadata.label_pl|default:"brak etykiety polskiej" }}</dd><dt>EN</dt><dd>{{ item.metadata.label_en }}</dd><dt>Definicja EN</dt><dd>{{ item.metadata.definition_raw|default:"brak definicji" }}</dd><dt>Identyfikator URI</dt><dd>{{ item.url }}</dd><dt>Schemat</dt><dd>{{ item.metadata.scheme_uri }}</dd></dl>
+<p>Status kodu i obowiązywanie prawne niepotwierdzone. URI jest identyfikatorem referencyjnym, nie automatycznie pobranym dokumentem.</p></article>{% empty %}<p>Brak zapisanych wartości dla filtra.</p>{% endfor %}
+{% if items.has_previous %}<a href="?page={{ items.previous_page_number }}&amp;scheme={{ filters.scheme|urlencode }}&amp;q={{ filters.q|urlencode }}">Poprzednia strona</a>{% endif %}
+{% if items.has_next %}<a href="?page={{ items.next_page_number }}&amp;scheme={{ filters.scheme|urlencode }}&amp;q={{ filters.q|urlencode }}">Następna strona</a>{% endif %}
+<p><a href="{% url 'registry_detail' 180 %}">Rejestr #180</a> · <a href="{% url 'registry_readiness' %}">Gotowość rejestru</a></p>{% endblock %}

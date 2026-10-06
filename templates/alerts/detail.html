@@ -1,0 +1,18 @@
+{% extends "registry_base.html" %}
+{% block title %}{{ notice.title }} — GeoKlimat{% endblock %}
+{% block content %}
+<p><a href="{% url 'alert_inbox' %}">← Skrzynka alertów</a></p>
+<h1>{{ notice.title }}</h1><p>{{ notice.created_at }} · {{ notice.get_kind_display }}</p>
+{% if not notice.read_at %}<form method="post" action="{% url 'alert_read' notice.pk %}">{% csrf_token %}<button>Oznacz jako przeczytane</button></form>{% endif %}
+{% if notice.kind == "digest" %}
+<p>Okres: {{ notice.payload.since }} — {{ notice.payload.until }}. Liczba alertów: {{ notice.payload.count }}.</p>
+{% for entry in entries %}<article><a href="{% url 'alert_detail' entry.pk %}">{{ entry.title }}</a> · {{ entry.created_at }}</article>{% endfor %}
+<p>{% if entries.has_previous %}<a href="?page={{ entries.previous_page_number }}">Poprzednia</a>{% endif %} {{ entries.number }} / {{ entries.paginator.num_pages }} {% if entries.has_next %}<a href="?page={{ entries.next_page_number }}">Następna</a>{% endif %}</p>
+{% else %}
+<p><a href="{% url 'change_detail' notice.thread_id %}">Otwórz aktualny wątek i dowody</a></p>
+<ul><li>Dołączone dokumenty: {{ notice.payload.added }}</li><li>Zmienione dokumenty: {{ notice.payload.changed }}</li><li>Dokumenty usunięte z aktualnego zestawu: {{ notice.payload.removed }}</li>
+{% if notice.payload.impact %}<li>Zmieniła się ocena wpływu lub jej aktualność.</li>{% endif %}
+{% if notice.payload.deadlines %}<li>Zmienił się zestaw potwierdzonych terminów.</li>{% endif %}</ul>
+<p>Dokumenty objęte zmianą (maksymalnie50): {% for item in notice.payload.items %}<a href="/items/{{ item }}/">ID {{ item }}</a> {% empty %}Brak zmian dokumentów.{% endfor %}</p>
+<p>To zapis wykrytej zmiany, nie porada prawna. Usunięcie dokumentu z aktualnego zestawu może oznaczać utratę potwierdzenia, nie uchylenie aktu. Sprawdź bieżący stan i historię w wątku.</p>
+{% endif %}{% endblock %}

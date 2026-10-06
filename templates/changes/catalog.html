@@ -1,0 +1,13 @@
+{% extends "registry_base.html" %}
+{% block title %}Wątki zmian — GeoKlimat{% endblock %}
+{% block content %}
+<h1>{% if watching %}Obserwowane wątki{% else %}Wątki zmian{% endif %}</h1>
+<p>Dokumenty połączone identyfikatorami i dowodami, nie podobieństwem tytułów. Pokrycie zależy od dostępnych źródeł.</p>
+<p><a href="{% url 'change_catalog' %}">Wszystkie wątki</a> · <a href="?watching=1">Moje obserwowane</a></p>
+{% if perms.ingestion.edit_change_threads %}<p><a href="{% url 'change_create' %}">Utwórz wątek redakcyjny</a></p>{% endif %}
+<form method="get"><label for="thread-q">Tytuł lub identyfikator</label><input id="thread-q" name="q" value="{{ q }}" maxlength="200">{% if watching %}<input type="hidden" name="watching" value="1">{% endif %}<button>Szukaj</button></form>
+{% for thread in threads %}<article><h2><a href="{% url 'change_detail' thread.pk %}">{{ thread.display_title }}</a></h2><p>{% if thread.process %}{{ thread.process.identifier }} · wątek oparty na procesie{% else %}Wątek redakcyjny{% endif %}</p></article>{% empty %}<p>Brak wątków pasujących do filtrów.</p>{% endfor %}
+{% if threads.has_previous %}<a href="?q={{ q|urlencode }}&amp;watching={% if watching %}1{% else %}0{% endif %}&amp;page={{ threads.previous_page_number }}">Poprzednie</a>{% endif %}
+<span>{{ threads.number }} / {{ threads.paginator.num_pages }}</span>
+{% if threads.has_next %}<a href="?q={{ q|urlencode }}&amp;watching={% if watching %}1{% else %}0{% endif %}&amp;page={{ threads.next_page_number }}">Następne</a>{% endif %}
+{% endblock %}

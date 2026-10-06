@@ -1,0 +1,20 @@
+{% extends "registry_base.html" %}
+{% block title %}Gotowość rejestru — GeoKlimat{% endblock %}
+{% block content %}
+<h1>Gotowość operacyjna rejestru</h1>
+<p>Stan {{ report.generated_at }}. Odczyt lokalnej bazy — bez audytów HTTP, pobierania, aktywacji i napraw.</p>
+<p><strong>Poprawny kanał nie potwierdza pełnego pokrycia biznesowego.</strong> „Configured” i zakończony przebieg danych nie są odbiorem epika. Ten raport nie zawiera zatwierdzenia kompletności.</p>
+<p>Pozycji rejestru: {{ report.registry_total }}. Z flagą przeglądu: {{ report.attention_total }}. Wynik filtra: {{ report.filtered_total }}.</p>
+<p>Powiązane unikalne kanały informacyjne: {{ report.source_active }} aktywnych / {{ report.source_total }} wszystkich. Kanały danych: {{ report.data_total }}. Wielokrotne powiązanie jednego kanału z rejestrem nie zwiększa tych liczników.</p>
+<form method="get">{{ form.as_p }}<button>Filtruj / eksportuj</button></form>
+<p>Wyłączony kanał może być celowo wstrzymany. Brak zadania pobrania pliku na żądanie jest normalny. Nie aktywuj źródeł automatycznie na podstawie flag.</p>
+<div class="scroll"><table>
+<thead><tr><th scope="col">Pozycja / stan integracji</th><th scope="col">Informacje i zakres</th><th scope="col">Dane / pliki</th><th scope="col">Przegląd</th></tr></thead>
+<tbody>{% for row in report.rows %}<tr>
+<td><a href="{% url 'registry_detail' row.registry_id %}">{{ row.registry_id }} — {{ row.organization }}</a><br>{{ row.name }}<br>{{ row.priority }} / {{ row.integration_state }}</td>
+<td>{% for source in row.sources %}<p>{{ source.name }} — {{ source.label }}<br><small>{{ source.detail }}</small><br>Ostatni sukces: {{ source.last_success_at|default:"brak" }}<br><small>{{ source.scope|default:"Zakres nieopisany; wymaga przeglądu." }}</small></p>{% empty %}Brak kanałów informacyjnych{% endfor %}</td>
+<td>{% for channel in row.data %}<p><a href="{% url 'data_detail' channel.id %}">{{ channel.name }}</a> — {{ channel.state }}<br>{{ channel.kind }}; ostatni wynik: {{ channel.last_status }}<br>Kontrola: {{ channel.last_checked_at|default:"brak" }}<br>{% if channel.harvest_status %}Przebieg: {{ channel.harvest_status }} / {{ channel.harvest_records }} rekordów. <a href="{% url 'data_coverage' %}">Zweryfikuj pokrycie i retencję</a><br>{% endif %}{% if channel.download_status %}Pobranie: {{ channel.download_status }}{% endif %}</p>{% empty %}Brak kanałów danych{% endfor %}</td>
+<td>{% for reason in row.reasons %}<p>{{ reason }}</p>{% empty %}Bez flag technicznych — nie oznacza kompletności{% endfor %}</td>
+</tr>{% empty %}<tr><td colspan="4">Brak wyników dla wybranych filtrów.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

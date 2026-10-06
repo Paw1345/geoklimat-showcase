@@ -1,0 +1,24 @@
+{% extends "registry_base.html" %}{% block content %}
+<h1>STAC — katalog scen lokalnej paczki</h1>
+<p><a href="{% url 'stac_coverage' %}">Przebiegi i dostępność kopii</a></p>
+<p>Sprawdzamy do 25 stron / 50 MiB istniejących kopii, bez pobierania rastrów.
+Filtr przestrzenny sprawdza przecięcie prostokątów obwiedni, nie dokładne przecięcie geometrii ani maskę PL/UE.
+To częściowy katalog. Wyniki zachowują wystąpienia i warianty, bez automatycznej deduplikacji.</p>
+<form method="get">{{ form.as_p }}<button type="submit">Sprawdź i wyszukaj</button></form>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if result %}
+<h2>Wynik zweryfikowanej paczki</h2>
+<p>Przebieg #{{ result.geoklimat.harvest_id }}, strony {{ result.geoklimat.verification.start_page }}–{{ result.geoklimat.verification.end_page }}.
+Sprawdzono {{ result.geoklimat.verification.checked_pages }} kopii / {{ result.geoklimat.verification.checked_bytes|filesizeformat }}.
+Pasujących wystąpień: {{ result.geoklimat.matched_occurrences_in_batch }}, pokazano {{ result.geoklimat.returned_occurrences }}.
+{% if result.geoklimat.truncated %}Wynik ograniczony limitem; zwiększ limit do maks. 250, żeby zobaczyć resztę tej paczki.{% endif %}</p>
+<p><a href="{{ links.export }}">Eksport GeoJSON do GIS (bez assets i URL)</a>
+{% if links.next %} · <a href="{{ links.next }}">Następna paczka tego samego przebiegu z tymi filtrami</a>{% endif %}</p>
+<div class="scroll"><table><thead><tr><th>Scena</th><th>Kolekcja</th><th>Data obserwacji</th><th>Kopia / strona</th></tr></thead><tbody>
+{% for feature in result.features %}<tr><td>{{ feature.properties.scene_id }}</td><td>{{ feature.properties.collection }}</td><td>{{ feature.properties.datetime }}</td><td>{{ feature.properties.snapshot_id }} / {{ feature.properties.page }}</td></tr>
+{% empty %}<tr><td colspan="4">Brak dopasowań w tej paczce — nie oznacza braku scen w całym zbiorze.</td></tr>{% endfor %}
+</tbody></table></div>
+<p>Cała wybrana paczka przeszła weryfikację, także strony poza limitem wyświetlania.
+Nie potwierdzono pełnych 30 dni, globalnej unikalności ani dokładnego zakresu PL/UE.
+Eksport zawiera kwity kopii i ich SHA256. Dane i uprawnienia dostawcy nie są w ten sposób certyfikowane.</p>
+{% endif %}{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "registry_base.html" %}
+{% block title %}Odbiór pilota — GeoKlimat{% endblock %}
+{% block content %}
+<h1>Odbiór pilota</h1>
+<p>Stała próbka: {{ sample_date }}. Liczba pozycji: {{ rows|length }}. Status odbioru: <strong>oczekuje na ocenę użytkownika</strong>.</p>
+<p>Ten panel jest tylko do odczytu. Nie zapisuje ocen, nie uruchamia AI ani nie publikuje zmian. Próbka nie jest losowa i nie dowodzi kompletności źródeł.</p>
+<h2>Co sprawdzić dla każdej publikacji</h2>
+<ol><li>Czy temat i rodzaj informacji są trafne?</li><li>Czy materiał jest przydatny w pracy administracji/GIS/ochrony środowiska?</li><li>Czego brakuje w opisie i czy jest duplikatem innej publikacji?</li><li>Czy data jest datą publikacji, a nie domyślnym terminem obowiązku?</li></ol>
+<p>Zapisz uwagi jako: ID → wynik (akceptuję / poprawka / nie mogę ocenić) → uzasadnienie → ewentualny ID duplikatu. Sam brak uwag nie oznacza akceptacji.</p>
+{% for row in rows %}
+<article><h2>{{ row.group }} · #{{ row.original.id }} — {{ row.original.title }}</h2>
+<details><summary>Stan początkowy</summary><p>{{ row.original.summary|default:"Brak opisu" }}</p><p>{{ row.original.kind }} · {{ row.original.state }} · {{ row.original.topics|join:", " }}</p></details>
+{% if row.item %}
+<p><a href="{% url 'item_history' row.item.pk %}">Aktualna karta i historia</a> · <a href="{{ row.item.url }}" rel="noreferrer">Źródło</a></p>
+{% if row.changed %}<p>Treść zmieniła się względem próbki początkowej. Oceń aktualną wersję.</p>{% endif %}
+<p>{{ row.item.summary|default:"Brak opisu" }}</p>
+<p>Rodzaj: {{ row.item.classification.kind|default:"Brak klasyfikacji" }} · Status: {{ row.item.classification.state_label|default:"Brak" }} · Tematy: {{ row.item.classification.topic_labels|join:", " }}</p>
+<p>Data publikacji: {{ row.item.published_at|default:"Nieznana" }} · Wersja: {{ row.item.revision }} · Reguły: {{ row.item.classification.rule_version }}</p>
+{% else %}<p role="alert">Brak zgodnego dokumentu w tej instalacji. Nie podstawiono innej publikacji pod ten ID.</p>{% endif %}
+</article>{% endfor %}
+{% endblock %}

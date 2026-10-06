@@ -1,0 +1,18 @@
+{% extends "registry_base.html" %}{% block content %}
+<h1>Wyszukiwarka informacji</h1>
+<p>Tytuły i dostępne opisy wszystkich pobranych publikacji, aktów prawnych i metadanych zbiorów. Nie przeszukujemy treści niepobranych dokumentów ani plików pomiarowych.</p>
+<p>Wpisz słowa, „dokładną frazę” w prostych cudzysłowach (" "), OR lub -wykluczenie. Zachowaj polskie znaki i formę słowa; brak wyszukiwania odmian i literówek. Puste zapytanie pokazuje wszystkie publikacje.</p>
+<form method="get">{{ form.as_p }}<button type="submit">Szukaj</button> <a href="{% url 'search' %}">Wyczyść filtry</a></form>
+{% if form.record_scope.value == 'publications' %}<p>Pomijamy wyłącznie rozpoznane metadane katalogów danych i usług. Nieznany lub brakujący typ pozostaje widoczny. To filtr technicznego typu rekordu, nie ocena trafności ani samych zmian prawnych; metadane publikacji Cellar i akty prawne nadal mogą wystąpić.</p>{% elif form.record_scope.value == 'catalogues' %}<p>Rozpoznane metadane zbiorów, stacji i usług. Surowe pomiary i pliki są w <a href="/data/">Pomiary i GIS</a>. Nie usunięto rekordów ani nie zmieniono ich ocen.</p>{% endif %}
+<p role="status">{{ items.paginator.count }} pasujących grup publikacji. Filtry dat dotyczą daty publikacji — pomijają wpisy bez daty.</p>
+{% for item in items %}<article>
+<small>{{ item.source.organization }} · {{ item.source.language|upper }}</small>
+<h2><a href="{{ item.url }}" rel="noopener noreferrer">{{ item.title }}</a></h2>
+<p>{{ item.summary|truncatechars:400 }}</p>
+{% if item.metadata.source_link_warning %}<p><strong>Odnośnik wymaga sprawdzenia:</strong> {{ item.metadata.source_link_warning }}</p>{% endif %}
+<p>{% if item.published_at %}Publikacja: {{ item.published_at|date:"d.m.Y" }}{% else %}Data publikacji niepodana{% endif %} · Pobrano: {{ item.first_seen_at|date:"d.m.Y H:i" }}</p>
+{% if item.classification %}<p>{{ item.classification.state_label }} · {{ item.classification.kind }} · {{ item.classification.topic_labels|join:" · " }}</p>{% endif %}
+<a href="{% url 'item_history' item.pk %}">Źródła i historia zmian</a>
+</article>{% empty %}<p>Brak wyników. Sprawdź pisownię lub zmniejsz liczbę filtrów.</p>{% endfor %}
+<nav aria-label="Strony wyników">{% if items.has_previous %}<a href="?{{ page_query }}&amp;page={{ items.previous_page_number }}">Poprzednia</a>{% endif %} Strona {{ items.number }} / {{ items.paginator.num_pages }} {% if items.has_next %}<a href="?{{ page_query }}&amp;page={{ items.next_page_number }}">Następna</a>{% endif %}</nav>
+{% endblock %}

@@ -1,0 +1,55 @@
+from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+
+from ingestion.eurostat import CONFIG, NOTE, URL
+from ingestion.models import RegistryEntry, Source
+from ingestion.service import batch_lock
+
+
+class Command(BaseCommand):
+    help = "Configure Eurostat Environment TOC; dry-run by default, no HTTP or activation."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--apply", action="store_true")
+
+    def handle(self, *args, **options):
+        with batch_lock() as acquired, transaction.atomic():
+            if not acquired:
+                raise CommandError("Ingestion busy; retry later")
+            entry = RegistryEntry.objects.filter(registry_id=184).first()
+            if entry is None:
+                raise CommandError("Import the registry first")
+            existing = Source.objects.filter(slug="registry-184").first()
+            if existing:
+                if (existing.adapter, existing.url, existing.config) != (
+                    "watch",
+                    URL,
+                    CONFIG,
+                ) or not entry.sources.filter(pk=existing.pk).exists():
+                    raise CommandError("Preserving administrator configuration or linkage")
+                self.stdout.write("Unchanged; audit and activation preserved")
+                return
+            if entry.sources.exists():
+                raise CommandError("Preserving existing registry linkage")
+            self.stdout.write("registry-184: create disabled Eurostat environment catalogue")
+            if not options["apply"]:
+                self.stdout.write("Dry-run; no database writes or HTTP")
+                return
+            source = Source.objects.create(
+                slug="registry-184",
+                name="Eurostat — Environment: katalog danych",
+                organization=entry.organization[:120],
+                adapter="watch",
+                url=URL,
+                config=CONFIG.copy(),
+                language="en",
+                priority=int(entry.priority[1]),
+                interval_minutes=360,
+                scope=NOTE,
+                reuse_notes=entry.technical.get("Reuse / licence") or "",
+                enabled=False,
+                activation_approved=False,
+            )
+            entry.sources.add(source)
+            entry.integration_state, entry.integration_note = "configured", NOTE
+            entry.save(update_fields=["integration_state", "integration_note"])

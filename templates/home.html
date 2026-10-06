@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GeoKlimat Monitor</title>
+  <style>
+    body { margin: 0; background: #f4f6f1; color: #16392f; font-family: system-ui, sans-serif; }
+    main { max-width: 1100px; margin: 48px auto; padding: 24px; }
+    .label { letter-spacing: .12em; text-transform: uppercase; font-size: .8rem; }
+    h1 { font-size: clamp(2.5rem, 7vw, 4.5rem); line-height: 1.05; margin: 24px 0; }
+    p { font-size: 1.15rem; line-height: 1.7; max-width: 620px; }
+    a { color: #176448; text-underline-offset: 5px; }
+    aside { margin-top: 40px; padding: 24px; background: white; border-left: 4px solid #70a488; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    article { background: white; padding: 24px; border: 1px solid #dbe2d8; border-radius: 12px; }
+    article h3 { margin: 10px 0; line-height: 1.4; }
+    small { color: #446458; }
+    select, button { padding: 10px; max-width: 100%; font: inherit; margin: 6px 4px 6px 0; }
+    button { background: #16392f; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; background: white; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dbe2d8; }
+  </style>
+</head>
+<body>
+<main>
+  <span class="label">Administracja · GIS · ochrona środowiska</span>
+  <h1>GeoKlimat<br>Monitor</h1>
+  <p>Jedno miejsce dla zmian dotyczących klimatu, INSPIRE, GIOŚ, GUGiK i Unii Europejskiej.</p>
+  <aside>
+    <strong>{{ enabled_count }} aktywnych kanałów · {{ item_count }} pobranych rekordów</strong>
+    <p>Metadane z oficjalnych źródeł. Klasyfikacja regułowa pomaga wybierać tematy, ale wymaga kontroli redakcyjnej. Akty ELI są dostępne po wybraniu źródła lub filtrów. Wykluczenie nie usuwa publikacji.</p>
+    <a href="/admin/">Panel administratora</a>
+    · <a href="/registry/">Rejestr źródeł ({{ registry_count }})</a>
+    · <a href="/data/">Pomiary i GIS</a>
+    {% if user.is_staff %} · <a href="/collections/">Kolekcje i katalogi</a>{% endif %}
+    · <a href="/search/">Wyszukiwarka</a>
+    · <a href="/legislation/">Procesy i akty</a> · <a href="/deadlines/">Terminy</a>
+    · <a href="/changes/">Wątki zmian</a>
+    · <a href="/changes/?watching=1">Obserwowane</a> · <a href="/alerts/">Alerty</a>
+    {% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button>Wyloguj się</button></form>{% else %} · <a href="{% url 'login' %}?next=/">Zaloguj się</a>{% endif %}
+    {% if perms.ingestion.edit_change_threads %} · <a href="{% url 'ai_catalog' %}">Szkice AI</a>{% endif %}
+  </aside>
+  <h2>Ostatnio pozyskane informacje</h2>
+  <form method="get">
+    {{ scope_form.record_scope.errors }}
+    <label for="{{ scope_form.record_scope.id_for_label }}">{{ scope_form.record_scope.label }}</label>
+    {{ scope_form.record_scope }}
+    {% if registry_id %}<input type="hidden" name="registry" value="{{ registry_id }}"><p>Pozycja rejestru {{ registry_id }} · <a href="/">Usuń filtr rejestru</a></p>{% endif %}
+    <label for="source">Źródło</label>
+    <select name="source" id="source">
+      <option value="">Aktualności i obserwowane strony</option>
+      {% for source in sources %}<option value="{{ source.slug }}" {% if selected == source.slug %}selected{% endif %}>{{ source.name }}</option>{% endfor %}
+    </select>
+    <label for="topic">Temat</label><select name="topic" id="topic"><option value="">Wszystkie tematy</option>{% for slug,label in topics %}<option value="{{ slug }}" {% if topic == slug %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <label for="status">Trafność</label><select name="status" id="status"><option value="all">Wszystkie oceny</option>{% for slug,label in statuses %}<option value="{{ slug }}" {% if status == slug %}selected{% endif %}>{{ label }}</option>{% endfor %}<option value="pending" {% if status == 'pending' %}selected{% endif %}>Niesklasyfikowane</option></select>
+    <label for="kind">Rodzaj</label><select name="kind" id="kind"><option value="">Wszystkie rodzaje</option>{% for label in kinds %}<option {% if kind == label %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button type="submit">Pokaż</button>
+  </form>
+  {% if record_scope == 'publications' %}<p>Widok pomija wyłącznie rozpoznane metadane katalogów danych i usług. Publikacje bez typu lub z nieznanym typem pozostają widoczne. Nie jest to ocena trafności ani wybór samych zmian prawa; filtr nie usuwa danych. Akty ELI nadal wymagają dotychczasowych filtrów źródła, tematu, oceny lub rodzaju.</p>{% elif record_scope == 'catalogues' %}<p>Widok obejmuje rozpoznane metadane zbiorów, stacji, katalogów usług i ich możliwości. Nie pokazuje surowych pomiarów ani plików; znajdziesz je w <a href="/data/">Pomiary i GIS</a>.</p>{% endif %}
+  <div class="cards">
+    {% for item in items %}<article>
+      <small>{{ item.source.organization }} · {{ item.source.language|upper }}</small>
+      <h3><a href="{{ item.url }}" rel="noopener noreferrer">{{ item.title }}</a></h3>
+      <p>{{ item.summary|truncatechars:280 }}</p>
+      {% if item.metadata.source_link_warning %}<p><strong>Odnośnik wymaga sprawdzenia:</strong> {{ item.metadata.source_link_warning }}</p>{% endif %}
+      {% if item.metadata.record_kind %}<small>Typ danych: {{ item.metadata.record_kind }}</small>{% endif %}
+      {% if item.classification %}<p><small>{{ item.classification.state_label }} · {{ item.classification.kind }}<br>{{ item.classification.topic_labels|join:" · " }}</small></p>{% else %}<p><small>Niesklasyfikowane</small></p>{% endif %}
+      <p><a href="{% url 'item_history' item.pk %}">Źródła i historia zmian</a> · wersja {{ item.revision }}</p>
+      <small>{% if item.published_at %}Publikacja: {{ item.published_at|date:"d.m.Y" }}{% else %}Data publikacji niepodana{% endif %}<br>Pobrano: {{ item.first_seen_at|date:"d.m.Y H:i" }}</small>
+    </article>{% empty %}<p>Brak pobranych informacji dla tego widoku. Status kanałów znajdziesz poniżej.</p>{% endfor %}
+  </div>
+  <nav aria-label="Strony wyników">{% if items.has_previous %}<a href="?{{ page_query }}&amp;page={{ items.previous_page_number }}">Poprzednia</a>{% endif %} Strona {{ items.number }} / {{ items.paginator.num_pages }} · {{ items.paginator.count }} grup {% if items.has_next %}<a href="?{{ page_query }}&amp;page={{ items.next_page_number }}">Następna</a>{% endif %}</nav>
+  <h2>Pokrycie źródeł</h2>
+  <p>Wyłączone kanały nie są pobierane przez harmonogram.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Źródło</th><th>Status</th><th>Ostatni sukces</th><th>Zakres</th></tr></thead>
+    <tbody>{% for source in sources %}<tr>
+      <td>{{ source.name }}</td>
+      <td>{% if not source.enabled %}Weryfikacja / wyłączone{% elif source.failures %}Błąd — ponawianie{% else %}Aktywne{% endif %}</td>
+      <td>{{ source.last_success_at|date:"d.m.Y H:i"|default:"—" }}</td>
+      <td>{{ source.scope }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+<footer><a href="/information/">Prywatność i ograniczenia</a>{% if user.is_staff %} · <a href="/quality/">Jakość danych</a>{% endif %}</footer>
+</main>
+</body>
+</html>

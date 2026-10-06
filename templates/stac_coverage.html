@@ -1,0 +1,92 @@
+{% extends "registry_base.html" %}{% block content %}
+<h1>STAC Polska/UE — zakres przebiegów i lokalne kopie</h1>
+<p>Stan {{ report.as_of }} · <a href="?format=json">Eksport JSON</a> · <a href="{% url 'data_storage' %}">Pojemność cache</a></p>
+<section><h2>Plan świeżego okna — bez resetu historii</h2>
+<p>Wykorzystujemy istniejące kanały 24h. Ten plan nie pobiera danych, nie tworzy kanałów i nie zmienia harmonogramu.
+Okno następnego przebiegu zostanie przypięte dopiero przy jego rozpoczęciu; nie oznacza pełnego pokrycia 30 dni.</p>
+{% for row in report.refresh_plan.rows %}<article><h3>{{ row.region }}</h3>
+<p>Historia: {{ row.history.state }}.
+{% if row.history.state == 'retention_review' %}Stary przebieg wymaga przeglądu; kursor i kopie pozostają bez zmian.{% endif %}</p>
+{% if row.recent.channel_id %}<p><a href="{% url 'data_detail' row.recent.channel_id %}">Próbka 24h</a>: {{ row.recent.state }}.
+{% if row.recent.search_end %}Koniec wyszukiwania: {{ row.recent.search_end }}; opóźnienie {{ row.recent.search_end_lag_seconds }} s.{% endif %}</p>{% endif %}
+{% if row.bounded.channel_id %}<p><a href="{% url 'data_detail' row.bounded.channel_id %}">Ograniczony przebieg 24h</a>: {{ row.bounded.state }}.
+{% if row.bounded.search_end %}Koniec wyszukiwania: {{ row.bounded.search_end }}.{% endif %}</p>{% endif %}
+{% if row.recommended_action == 'reuse_scheduled_bounded' %}<p>Nie dodajemy kolejnego kanału. Korzystamy z istniejącego harmonogramu:
+{% if row.bounded.due %}termin już przypada — obsługa w normalnym cyklu workera{% else %}najbliższy termin {{ row.bounded.next_fetch_at }}{% endif %}.
+To termin planowany, nie gwarancja wykonania.</p>{% else %}<p>Wymagany przegląd istniejącego profilu, zgody lub konfiguracji. Brak automatycznej aktywacji.</p>{% endif %}
+</article>{% endfor %}
+<p>Przyszłe próbki przy wielkości ostatnich poprawnych przebiegów:
+{% if report.refresh_plan.budget.future_samples_estimate_bytes != None %}{{ report.refresh_plan.budget.future_samples_estimate_bytes|filesizeformat }}{% else %}nieznane{% endif %}.
+Pułap przyszłych ograniczonych przebiegów przez okres retencji:
+{% if report.refresh_plan.budget.future_bounded_ceiling_bytes != None %}{{ report.refresh_plan.budget.future_bounded_ceiling_bytes|filesizeformat }}{% else %}nieznany{% endif %}.
+To scenariusz dodatkowo do obecnych kopii, bez odliczania przyszłego wygasania i bez podwójnego liczenia nowych kanałów.</p>
+{% if report.refresh_plan.budget.fits_existing_collection_scenario == False %}<p><strong>Scenariusz istniejących kanałów przekracza budżet z rezerwą. Nie dokładamy wymuszonego przebiegu.</strong>
+Nie jest to prognoza daty zapełnienia: wielkość próbek może się zmieniać, a rzeczywista retencja zwalnia miejsce.</p>
+{% elif report.refresh_plan.budget.fits_existing_collection_scenario == None %}<p>Brak wiarygodnego scenariusza kosztu wszystkich działających profili; nie traktujemy nieznanego kosztu jako zera.</p>
+{% else %}<p>Scenariusz mieści się przed nieznanym wzrostem pozostałych kolektorów. Nie jest zgodą na zwiększenie pobierania.</p>{% endif %}
+<p>Pełne 30 dni, liczba brakujących scen, integralność treści i dokładna maska PL/UE pozostają niepotwierdzone.
+Plan dostępny także przez CLI <code>stac_refresh_plan</code>.</p></section>
+<section><h2>Budżet rozszerzenia STAC</h2>
+<p>Operator może zmierzyć większą paczkę przez CLI <code>stac_window_probe --region EU</code>.
+Domyślnie jest to plan bez HTTP; osobne <code>--fetch</code> wykonuje ograniczoną próbę bez zapisywania kopii i kursorów.
+Ten panel nigdy nie uruchamia pobierania. Próba nie zatwierdza pełnej doby ani większego kolektora.</p>
+<p>Cały cache: {{ report.capacity.used_declared_bytes|filesizeformat }} / {{ report.capacity.quota_bytes|filesizeformat }}.
+Wolne logicznie: {{ report.capacity.free_logical_bytes|filesizeformat }}; rezerwa scenariusza: {{ report.capacity.reserve_bytes|filesizeformat }}.
+Hipotetyczne dodatkowe 256 MiB dziennie łącznie dla nowych przebiegów to {{ report.capacity.additional_retention_budget_bytes|filesizeformat }} przy retencji {{ report.capacity.retention_days }} dni.</p>
+{% if report.capacity.fits_current_headroom %}<p>Scenariusz mieści się w dzisiejszym wolnym budżecie przed dalszym wzrostem innych kolektorów. To nie zgoda na aktywację.</p>
+{% else %}<p><strong>Scenariusz przekracza dostępny budżet z rezerwą — nie rozszerzamy automatycznie pobierania.</strong></p>{% endif %}
+<p>Górny dodatkowy budżet dzienny wynikający wyłącznie z obecnego miejsca i rezerwy: {{ report.capacity.max_additional_daily_bytes_before_other_growth|filesizeformat }}.
+Nie jest limitem bezpiecznym dla działającego systemu: wzrost historii i innych kolektorów pozostaje nieznany.</p>
+{% if report.capacity.future_samples_retention_estimate_bytes != None %}<p>Scenariusz przyszłych próbek przy wielkości ostatniego poprawnego przebiegu: {{ report.capacity.future_samples_retention_estimate_bytes|filesizeformat }} przez okres retencji, dodatkowo do obecnych kopii.</p>{% else %}<p>Brak dostatecznie świeżych metadanych wszystkich aktywnych próbek do oszacowania ich kosztu.</p>{% endif %}
+{% if report.capacity.fits_with_sample_estimate == False %}<p><strong>Po dodaniu oszacowanych przyszłych próbek scenariusz również nie mieści się w budżecie.</strong></p>{% endif %}
+<p>To obliczenia na deklarowanych rozmiarach kopii, bez czytania payloadów, pobierania, kasowania i zmian limitów. Pusta próbka nie oznacza zerowego kosztu pełnej doby.
+Nie znamy pełnego wolumenu dobowego dostawcy ani wolnego miejsca na dysku; retencja wygaszanych kopii nie jest z góry odliczana.</p></section>
+<p>Domyślnie odczytujemy wyłącznie zapisane metadane. Na żądanie operatora sprawdzamy lokalne treści jednej paczki (maks. 25 stron / 50 MiB).
+Nie pobieramy nowych scen ani nie resetujemy przebiegów.
+Każdy przebieg ma zamrożony na starcie zakres dat. Jego zakończenie nie oznacza aktualnej pełnej historii 30 dni.
+Bbox jest prostokątem wyszukiwania, nie dokładną maską granic Polski lub UE. Assets i rastry nie są pobrane.</p>
+{% for row in report.rows %}<article>
+<h2><a href="{% url 'data_detail' row.channel_id %}">{{ row.name }}</a></h2>
+{% if row.harvest_id %}
+{% if row.acquisition_mode == 'bounded_window' %}<p>Wznawialne okno 24h: do 20 stron / 200 scen / 16 MiB, bez zmiany historii i próbek.
+Bounded to limit, paused to rezerwa cache; koniec zapytania nie potwierdza pełnej doby ani dokładnej maski.</p>{% endif %}
+{% if row.acquisition_mode == 'recent_sample' %}<p>Świeża próbka: ostatnie 24 godziny, maks. 2 strony / 20 scen.
+Nie jest pełną dobą ani zamiennikiem historycznego przebiegu. „bounded” oznacza limit próbki, nie koniec katalogu;
+kursor pozostałych stron jest zachowany, ale następny cykl pobierze nowe okno.</p>{% endif %}
+<p><a href="{% url 'stac_scenes' %}?channel={{ row.channel_id }}&amp;harvest={{ row.harvest_id }}&amp;start=1">Katalog scen i eksport GeoJSON pierwszej paczki</a></p>
+<p><a href="?verify=1&amp;channel={{ row.channel_id }}&amp;harvest={{ row.harvest_id }}&amp;start=1">Sprawdź SHA256 i rekordy stron 1–25 tego przebiegu</a></p>
+<p>Przebieg #{{ row.harvest_id }} · {{ row.status }} · {% if row.scan_complete %}koniec paginacji{% else %}nie potwierdzono końca paginacji{% endif %} · {% if row.has_cursor %}kursor zapisany{% else %}brak kolejnego kursora{% endif %}.</p>
+{% if row.search_start %}<p>Zakres wyszukiwania: {{ row.search_start }} — {{ row.search_end }}.
+Od końca zakresu do raportu: {{ row.search_end_lag_seconds }} sekund. Kolekcja: {{ row.collection }} · bbox: {{ row.bbox }}.</p>{% endif %}
+{% if row.window_timeline %}<p>W bieżącym oknie 30 × 24 godziny:
+{{ row.window_timeline.days_outside_frozen_search }} dni UTC całkowicie poza zamrożonym wyszukiwaniem,
+{{ row.window_timeline.days_partly_searched }} dni częściowo objętych jego zakresem.
+To porównanie zakresów dat, nie licznik brakujących scen ani potwierdzenie awarii źródła.
+Liczba dni kalendarzowych może wynosić 31, ponieważ pierwsza i ostatnia doba są częściowe.
+Rozkład rzeczywistych obserwacji wymaga audytu treści.</p>{% endif %}
+<p>Odczytano {{ row.read_pages }} stron i {{ row.read_record_occurrences }} wystąpień rekordów.
+Nie jest to zweryfikowana liczba unikalnych scen.</p>
+<p>Według metadanych dostępne {{ row.available_pages }} / {{ row.read_pages }} stron,
+{{ row.available_record_occurrences }} wystąpień rekordów, {{ row.available_bytes|filesizeformat }}.
+Niedostępne lub odrzucone strony: {{ row.unavailable_pages }}.</p>
+<p>Brak kopii dla {{ row.missing_snapshot_pages|default_if_none:"nie sprawdzono" }} stron.
+{% if row.missing_page_numbers_sample %}Pierwsze brakujące numery (maks. 20): {{ row.missing_page_numbers_sample }}.{% endif %}
+Zapisane wygasłe kopie: {{ row.expired_snapshot_rows|default_if_none:"nie sprawdzono" }};
+odrzucone kopie z powodu metadanych lub dat: {{ row.rejected_snapshot_rows|default_if_none:"nie sprawdzono" }}.
+Brak kopii nie dowodzi przyczyny jej usunięcia.</p>
+<p>Daty obserwacji z metadanych zachowanych kopii: {{ row.oldest_observation_metadata|default:"Brak" }} — {{ row.newest_observation_metadata|default:"Brak" }}.
+To granice dat, nie dowód ciągłości ani braku luk.</p>
+{% if row.issues %}<p>Wymagany przegląd: {{ row.issues|join:", " }}.</p>{% elif row.all_read_pages_present %}<p>Metadane wskazują zachowanie wszystkich dotychczas odczytanych stron; integralność treści nie jest sprawdzona.</p>{% else %}<p>Nie potwierdzono zachowania wszystkich odczytanych stron.</p>{% endif %}
+{% else %}<p>Brak przebiegu.</p>{% endif %}</article>{% empty %}<p>Brak kanałów STAC.</p>{% endfor %}
+{% if report.verification %}<article><h2>Zweryfikowana paczka lokalnych treści</h2>
+<p>Przebieg #{{ report.verification.harvest_id }}, strony {{ report.verification.start_page }}–{{ report.verification.end_page }}:
+{{ report.verification.checked_pages }} kopii, {{ report.verification.checked_bytes|filesizeformat }},
+{{ report.verification.record_occurrences_in_batch }} wystąpień rekordów.
+SHA256, schemat, daty, kolekcja i struktura geometrii zgodne w tej paczce.</p>
+<p>{{ report.verification.distinct_scene_ids_in_batch }} różnych ID scen;
+{{ report.verification.repeated_occurrences_in_batch }} powtórzeń między stronami;
+{{ report.verification.scene_ids_with_multiple_variants_in_batch }} ID z różnymi wersjami treści.
+Nie rozstrzygamy, która wersja jest poprawna. Inne paczki i pełne pokrycie pozostają niezweryfikowane.</p>
+{% if report.verification.next_start_page %}<p><a href="?verify=1&amp;channel={{ report.verification.channel_id }}&amp;harvest={{ report.verification.harvest_id }}&amp;start={{ report.verification.next_start_page }}">Sprawdź następną paczkę tego samego przebiegu</a></p>{% endif %}
+<p><a href="?format=json&amp;verify=1&amp;channel={{ report.verification.channel_id }}&amp;harvest={{ report.verification.harvest_id }}&amp;start={{ report.verification.start_page }}">JSON wyniku z identyfikatorami kopii i SHA256</a></p></article>{% endif %}
+{% endblock %}

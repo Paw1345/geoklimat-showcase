@@ -1,0 +1,96 @@
+{% extends "registry_base.html" %}{% block content %}
+<h1>{{ entry.registry_id }}. {{ entry.organization }} — {{ entry.name }}</h1>
+<p>{{ entry.integration_state }}: {{ entry.integration_note }}</p>
+{% if entry.registry_id == 62 %}
+<section><h2>SOPO — automatyczne pobieranie zatrzymane</h2>
+<p>Rozpoznanie 2026-10-04: regulamin SOPO z 29 kwietnia 2025 r. (§5h)
+zabrania automatycznego pobierania informacji i danych. Publiczny WMS lub
+technicznie działające Query nie oznaczają zgody na kolektor.</p>
+<p>Dotychczasowe metadane zachowano jako historyczne. Nie pobrano geometrii SOPO.
+Wznowienie wymaga wyjaśnienia zakresu z PIG-PIB, nie samej lokalnej akceptacji.
+<a href="https://www.pgi.gov.pl/osuwiska/dokumenty-prawne/8549-regulamin-korzystania-z-zasobow-sopo/file.html">Regulamin SOPO</a> ·
+<a href="https://www.pgi.gov.pl/osuwiska/123/aplikacja.html">Oficjalna aplikacja i drogi dostępu</a>.</p></section>
+{% endif %}
+{% if entry.registry_id == 204 %}
+<section><h2>ESA EO-CAT — niepotwierdzony dostęp do katalogu</h2>
+<p>Rozpoznanie 2026-10-04: standardowy transport GeoKlimat ponownie zakończył próbę
+timeoutem podczas pobierania robots.txt z eocat.esa.int. Katalog nie został odczytany.
+Nie potwierdzono przyczyny ani trwałej niedostępności usługi; brak podstaw do aktywacji.</p>
+<p>Nie dodano hosta do stałej listy, konektora, wyjątku robots ani konta.
+<a href="https://eocat.esa.int/eo-catalogue/stac.html">Oficjalna dokumentacja STAC EO-CAT</a>.
+Metadane innych katalogów są dostępne w <a href="/collections/">lokalnym panelu kolekcji</a>,
+ale nie zastępują integracji ESA204.</p></section>
+{% endif %}
+{% if entry.registry_id == 203 %}
+<section><h2>ECMWF — zakres katalogu ECDS</h2>
+<p>Publiczne opisy kolekcji ECMWF Data Store, nie cała oferta ECMWF ani pobrane prognozy.
+Daty published/updated są datami wpisu katalogowego; zasięg czasowy nie oznacza dostępności pomiarów.
+Zachowujemy źródłowy zasięg 0–360° bez maskowania Polski/UE. Integracja pełnych danych pozostaje otwarta.</p>
+<p>Licencja other nie oznacza zgody na pobranie. Nie akceptowano warunków ani nie użyto konta/retrieval.
+<a href="https://ecds.ecmwf.int/how-to-api">Oficjalna instrukcja dostępu</a>.</p></section>
+{% endif %}
+{% if entry.registry_id == 192 %}
+<section aria-labelledby="clms-scope-heading">
+<h2 id="clms-scope-heading">CLMS — zakres publicznych metadanych CDSE</h2>
+<p>Kanał opisuje kolekcje CLMS dostępne w Copernicus Data Space (wyszukiwanie q=clms).
+Nie zastępuje pełnego katalogu CLMS ani dostępu do danych; stan integracji pozostaje otwarty.
+Ogólny kanał CDSE191 jest zachowany bez zmian. Stan kanału CLMS i ostatni audyt są poniżej.</p>
+<p>Rozpoznanie 2026-10-04: podstawowe API land.copernicus.eu jest udokumentowane,
+ale robots.txt zabrania aplikacji pobierania ścieżki wyszukiwania. Nie dodano wyjątku.
+Katalog CDSE jest osobnym, oficjalnie udokumentowanym interfejsem z poprawną polityką dostępu.</p>
+<p>Wskaźniki licencji „other” lub „proprietary” są zachowywane bez zmiany interpretacji.
+Nie potwierdzają pozwolenia na pobranie lub redystrybucję rastrów.
+Formaty i wersje to osobne kolekcje, nie liczba unikatowych produktów; zasięg kolekcji nie jest dokładną maską UE.</p>
+<p><a href="https://documentation.dataspace.copernicus.eu/Data/ComplementaryData/CLMS.html">Zakres CLMS w CDSE</a> ·
+<a href="https://land.copernicus.eu/en/data-policy">Polityka danych CLMS</a>.</p>
+</section>
+{% endif %}
+{% if entry.registry_id == 186 %}
+<section aria-labelledby="echa-access-heading">
+<h2 id="echa-access-heading">ECHA CHEM — zakres i warunki dostępu</h2>
+<p>Rozpoznanie 2026-10-01: portal działa, ale wyszukiwarka wymaga akceptacji legal notice. GeoKlimat nie zaakceptował warunków i nie pobiera substancji ani pełnych eksportów REACH/DWD.</p>
+<p>Warunki dostawcy ograniczają kopiowanie całości lub istotnej części bazy bez uprzedniej pisemnej zgody ECHA i wskazują prawa podmiotów trzecich. Publiczny link pobrania nie potwierdza prawa do replikacji całej bazy.</p>
+<p><a href="https://chem.echa.europa.eu/">Oficjalny portal ECHA CHEM</a> · <a href="https://chem.echa.europa.eu/legal-notice">Warunki dostawcy</a>. To opis rozpoznania, nie opinia prawna ani zaakceptowany wyjątek odbioru epiku.</p>
+</section>
+{% endif %}
+{% if entry.registry_id == 189 %}
+<section aria-labelledby="funding-access-heading">
+<h2 id="funding-access-heading">Funding &amp; Tenders — dokumentacja a aktualne nabory</h2>
+<p>Rozpoznanie 2026-10-01: przygotowane kanały GET obejmują wyłącznie metadane dokumentów referencyjnych LIFE i Horizon Europe 2021–2027. Nie pobierają plików, nie ustalają terminów i nie potwierdzają statusu otwartego naboru. Rzeczywisty stan kanałów jest poniżej.</p>
+<p>Publiczne wyszukiwanie LIFE przez POST ma zatwierdzoną, ograniczoną diagnostykę. Próba z 1 października 2026 zwróciła 31 rekordów z przeszłymi terminami: nie zaimportowano ich jako aktualnych naborów. Bieżące nabory nadal nie są potwierdzone; statyczna lista tematów ani katalog dokumentacji nie zastępują ich monitoringu.</p>
+<p><a href="https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/support/apis">Oficjalne API aktualnych naborów</a> · <a href="https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/support/apis_old">Udokumentowane katalogi GET</a>.</p>
+</section>
+{% endif %}
+{% if gios_catalogue %}
+<section aria-labelledby="gios-catalogue-heading">
+<h2 id="gios-catalogue-heading">Rozpoznane katalogi API GIOŚ</h2>
+<p>To odnośniki do oficjalnych metadanych w dane.gov.pl, nie działające kanały pomiarowe aplikacji. Lista obejmuje wybrane usługi, nie cały katalog GIOŚ.</p>
+<ul>{% for dataset in gios_catalogue %}<li><a href="{{ dataset.url }}">{{ dataset.title }}</a> — zbiór {{ dataset.dataset_id }}, rejestr #{{ dataset.registry_id }}</li>{% endfor %}</ul>
+<p><strong>Ostatnie rozpoznanie: 2026-09-30.</strong> Portal dane.gios.gov.pl zwraca pod robots.txt stronę HTML zamiast polityki dostępu. Alternatywny host inspire.gios.gov.pl nie przeszedł audytu dostępności polityki. Nie aktywowano pobierania tych pomiarów.</p>
+<p>To datowany wynik audytu, nie bieżący test dostępności. Otwarcie tej karty nie odpytuje usług zewnętrznych. Istniejące kanały aplikacji mają osobne statusy poniżej.</p>
+</section>
+{% endif %}
+{% if entry.registry_id == 29 or entry.registry_id == 43 or entry.registry_id == 56 or entry.registry_id == 169 or entry.registry_id == 193 or entry.registry_id == 194 %}<p><strong>Oczekuje na uprawnienia.</strong> Zaakceptowany wyjątek odbioru epiku 4.5 (2026-09-19). Nie oznacza działającej integracji ani nadania dostępu.</p>{% endif %}
+{% if entry.registry_id == 193 or entry.registry_id == 194 %}<p>Wyjątek dotyczy pobierania danych CDS/ADS wymagających konta i ręcznej akceptacji warunków zbiorów. Nie zastępuje implementacji konektora ani obsługi publicznych metadanych.</p>{% endif %}
+<p><a href="/?registry={{ entry.registry_id }}">Publikacje powiązanych kanałów</a> · <a href="/data/?registry={{ entry.registry_id }}">Pomiary i dane GIS tego źródła</a></p>
+<h2>Kanały aplikacji</h2>
+<p>Stan konfiguracji rejestru nie oznacza działającego pobierania. Poniższe statusy pochodzą z zapisanej historii, nie z bieżącego testu usług. Próg świeżości: większa z wartości 24 godziny i 3 okresy odświeżania.</p>
+{% for health in source_health %}{% with source=health.source %}
+<article data-source-state="{{ health.state }}">
+<h3>{{ source.name }}</h3><a href="{{ source.url }}">{{ source.url }}</a>
+<p><strong>{{ health.label }}</strong> — {{ health.detail }}</p>
+<p>Adapter {{ source.adapter }} · co {{ source.interval_minutes }} min · zatwierdzenie: {{ source.activation_approved|yesno:"tak,nie" }} · aktywny: {{ source.enabled|yesno:"tak,nie" }}.</p>
+<p>Zakres: {{ source.scope }}</p>
+{% if source.config.mode == 'ems_initial_activations' %}<p>EMS — decyzja o warunkach metadanych:
+{% if source.config.terms_accepted %}zapisana; samo to nie oznacza aktywacji kanału{% else %}<strong>nie została zapisana; trwały import i zwykła aktywacja są zablokowane</strong>{% endif %}.
+Audyt potwierdza tylko pierwszą stronę API, nie pełny zakres EMS.
+<a href="https://mapping.emergency.copernicus.eu/terms-and-conditions/">Warunki CEMS</a> ·
+<a href="https://mapping.emergency.copernicus.eu/about/citation-guidelines/">Atrybucja</a>.</p>{% endif %}
+<p>Ostatni sukces: {{ source.last_success_at|default:"brak" }}. Kolejne błędy pobierania: {{ source.failures }}.</p>
+<p>Ostatnia próba: {{ source.latest_run_at|default:"brak" }}. Następny zaplanowany termin: {{ source.next_fetch_at }}.</p>
+<p>Stan audytu: {{ source.last_audit.status|default:"brak" }}; data audytu: {{ source.audited_at|default:"brak" }}. Audyt nie zastępuje aktualnego stanu pobierania.</p>
+</article>{% endwith %}{% empty %}<p>Nie uruchomiono pobierania. Wymagania i ograniczenia poniżej.</p>{% endfor %}
+<h2>Dane rejestru — zachowane bez zmian</h2><dl>{% for key,value in entry.master.items %}<dt>{{ key }}</dt><dd>{{ value|default_if_none:"—" }}</dd>{% endfor %}</dl>
+<h2>Weryfikacja z pliku (nie audyt aplikacji)</h2><dl>{% for key,value in entry.technical.items %}<dt>{{ key }}</dt><dd>{{ value|default_if_none:"—" }}</dd>{% endfor %}</dl>
+<h2>Kolejka z pliku</h2><dl>{% for key,value in entry.queue.items %}<dt>{{ key }}</dt><dd>{{ value|default_if_none:"—" }}</dd>{% empty %}<p>Poza kolejką P0/P1.</p>{% endfor %}</dl>
+{% endblock %}

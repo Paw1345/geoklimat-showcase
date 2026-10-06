@@ -1,0 +1,27 @@
+{% extends "registry_base.html" %}
+{% block title %}{{ thread.display_title }} — GeoKlimat{% endblock %}
+{% block content %}
+<p><a href="{% url 'change_catalog' %}">← Wątki zmian</a></p><h1>{{ thread.display_title }}</h1>
+{% if thread.process %}<p><a href="{% url 'legal_detail' thread.process_id %}">{{ thread.process.identifier }} — proces i dowody</a></p>{% endif %}
+{% if user.is_authenticated %}<form method="post" action="{% url 'change_watch' thread.pk %}">{% csrf_token %}<input type="hidden" name="action" value="{% if watching %}unfollow{% else %}follow{% endif %}"><button>{% if watching %}Przestań obserwować{% else %}Obserwuj wątek{% endif %}</button></form>{% else %}<p><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Zaloguj się, aby obserwować</a></p>{% endif %}
+<p>Obserwowanie zapisuje wątek na prywatnej liście i włącza wykrywanie kolejnych zmian. <a href="/alerts/">Alerty i podsumowania</a> są dostępne w aplikacji; e-mail nie jest włączony.</p>
+<h2>Ocena wpływu</h2>
+{% if impact_ai %}<p>Ocena powstała przy wsparciu lokalnego AI i została zatwierdzona przez redaktora.</p>{% endif %}
+{% if perms.ingestion.edit_change_threads %}<p><a href="{% url 'ai_catalog' %}">Szkice lokalnego AI — panel redakcyjny</a></p>{% endif %}
+{% if impact_current %}<article><p>Ocena redakcyjna · {{ impact.kind_labels|join:" · " }} · autor: {{ impact.author.get_username }} · {{ impact.created_at }}</p><h3>Co się zmienia</h3><p>{{ impact.change|linebreaksbr }}</p><h3>Kogo dotyczy</h3><p>{{ impact.audience|linebreaksbr }}</p><p><a href="{{ impact.evidence_url }}" rel="noopener noreferrer">Dowód źródłowy</a>: {{ impact.evidence }}</p></article>
+{% elif impact %}<p role="status">Ocena wymaga ponownej kontroli: dokument zmienił się lub przestał należeć do wątku. Poprzednia ocena jest w historii.</p>
+{% else %}<p>Brak zweryfikowanej oceny. Nie wyciągamy wniosków o obowiązkach z samych tytułów.</p>{% endif %}
+<h2>Terminy potwierdzone źródłem</h2><p>Daty z epika 6, nie porada prawna. Różne daty zachowujemy wraz z dokumentami; brak wpisu nie oznacza braku obowiązku. Maksymalnie 100 terminów w tym podglądzie — pełna historia w procesie.</p>
+{% for event in events %}<p>{{ event.date }} — {{ event.get_kind_display }} · <a href="{{ event.evidence_url }}">źródło</a> · {{ event.link.process.identifier }}</p>{% empty %}<p>Brak potwierdzonych terminów.</p>{% endfor %}
+<h2>Dlaczego dokumenty są razem?</h2><p>Ten sam identyfikator procesu, jawna relacja projekt–akt (jeden poziom) lub uzasadnione powiązanie redakcyjne. Inne relacje prawne nie scalają wątków.</p>
+{% for relation in relations %}<p>{{ relation.link.process.identifier }} → {{ relation.target.identifier }}: {{ relation.evidence }}</p>{% endfor %}
+<h2>Dokumenty — oś publikacji</h2>
+{% if perms.ingestion.edit_change_threads %}<form method="get" action="{% url 'change_choose' thread.pk %}"><label for="item-id">ID dokumentu do dołączenia / ponownej kontroli</label><input id="item-id" type="number" min="1" name="item" required><button>Otwórz podgląd</button></form>{% endif %}
+{% for item in items %}<article><h3><a href="{% url 'item_history' item.pk %}">{{ item.title }}</a></h3><p>{{ item.published_at|default:"Data publikacji niepodana" }} · {{ item.source.name }} · ID {{ item.pk }}</p><p>{{ item.summary }}</p><a href="{{ item.url }}" rel="noopener noreferrer">Oryginał</a>
+{% if perms.ingestion.edit_change_threads %} · <a href="{% url 'change_document' thread.pk item.pk %}">Powiązanie / wyłączenie</a> · <a href="{% url 'change_impact' thread.pk item.pk %}">Oceń wpływ na podstawie dokumentu</a><form method="post" action="{% url 'ai_create' thread.pk item.pk %}">{% csrf_token %}<button>Przygotuj szkic AI z opisu</button></form>{% endif %}</article>{% empty %}<p>Brak aktualnych dokumentów. Zmiana źródła może wymagać ponownej kontroli powiązania.</p>{% endfor %}
+{% if items.has_previous %}<a href="?page={{ items.previous_page_number }}">Poprzednie dokumenty</a>{% endif %} {{ items.number }} / {{ items.paginator.num_pages }} {% if items.has_next %}<a href="?page={{ items.next_page_number }}">Następne dokumenty</a>{% endif %}
+<h2>Historia ocen — również nieaktualne</h2>{% for row in history %}<details><summary>{{ row.created_at }} · {{ row.author.get_username }}{% if row.superseded_at %} · zastąpiona{% endif %}</summary><p>{{ row.change }}</p><p>{{ row.audience }} · {{ row.kind_labels|join:" · " }}</p><p><a href="{{ row.evidence_url }}">Dowód</a>: {{ row.evidence }}</p><p>Dokument {{ row.item_id }}, hash: {{ row.item_hash }}</p></details>{% empty %}<p>Brak historii ocen.</p>{% endfor %}
+{% if history.has_previous %}<a href="?history={{ history.previous_page_number }}">Nowsze oceny</a>{% endif %}{% if history.has_next %}<a href="?history={{ history.next_page_number }}">Starsze oceny</a>{% endif %}
+<h2>Historia decyzji o dokumentach</h2>{% for row in decisions %}<p>{{ row.created_at }} · {{ row.author.get_username }} · ID {{ row.item_id }} · {% if row.included %}dołączono{% else %}wyłączono{% endif %}{% if row.superseded_at %} (zastąpiona){% endif %}: {{ row.reason }}</p>{% empty %}<p>Brak ręcznych decyzji.</p>{% endfor %}
+{% if decisions.has_previous %}<a href="?decisions={{ decisions.previous_page_number }}">Nowsze decyzje</a>{% endif %}{% if decisions.has_next %}<a href="?decisions={{ decisions.next_page_number }}">Starsze decyzje</a>{% endif %}
+{% endblock %}

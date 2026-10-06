@@ -1,0 +1,38 @@
+{% extends "registry_base.html" %}
+{% block title %}GeoKlimat — historia pomiarów IMGW{% endblock %}
+{% block content %}
+<h1>Historia zapisanych pomiarów IMGW</h1>
+<p>SYNOP, METEO i HYDRO z lokalnych kopii. Otwarcie i eksport nie pobierają danych ani nie odświeżają retencji.</p>
+<p><strong>Nie jest to kompletne archiwum 30 dni ani oficjalna ocena jakości.</strong> Jednostki niepotwierdzone: zachowujemy surowe wartości bez konwersji i bez ocen progów alarmowych. Archiwum dobowe SYNOP to osobny produkt, nie jest łączone z tymi odczytami.</p>
+<p>Najpierw wybierz kanał i pozostaw stację pustą, aby zobaczyć dostępne identyfikatory. Następnie wpisz identyfikator oraz opcjonalnie nazwę parametru.</p>
+<form method="get">{{ form.as_p }}<button>Sprawdź lokalną historię</button></form>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if links.restart %}<p><a href="{{ links.restart }}">Rozpocznij nowy przegląd paczek kopii</a> — nowy zakres bez starego tokenu.</p>{% endif %}
+{% if result %}
+<h2>{{ result.channel }}</h2><p>{{ result.attribution }}</p>
+<p>Stan na {{ result.as_of }}. Kopii: {{ result.coverage.copy_count }}, odczyt {{ result.coverage.read_bytes|filesizeformat }}. Strefa interpretacji przypięta w kopiach: {{ result.coverage.timezone_interpretation|join:", " }}; tabela i dni poniżej w UTC.</p>
+{% if result.copy_batches.mode == "batches" %}<section aria-labelledby="copy-batches"><h2 id="copy-batches">Paczka kopii {{ result.copy_batches.page }} z {{ result.copy_batches.pages }}</h2>
+<p>Odczytano {{ result.copy_batches.selected_copies }} z {{ result.copy_batches.total_copies }} kopii. Cały przypięty zakres ma {{ result.copy_batches.total_bytes|filesizeformat }}. Zakres ustalony na {{ result.copy_batches.anchor }}; token ważny do godziny od rozpoczęcia. Zmiana, usunięcie lub wygaśnięcie przypiętej kopii wymaga nowego przeglądu.</p>
+{% if not result.coverage.all_available_copies_selected %}<p><strong>Wynik częściowy: liczby, warianty, lista stacji i dni bez odczytu dotyczą tylko tej paczki, nie całej lokalnej historii.</strong> Te same odczyty mogą wystąpić w kilku paczkach; nie sumuj wyników bez deduplikacji po stacji, parametrze, czasie i surowej wartości.</p>{% endif %}
+<p>{% if links.previous %}<a href="{{ links.previous }}">Nowsza paczka</a> · {% endif %}{% if links.next %}<a href="{{ links.next }}">Starsza paczka</a>{% endif %}</p></section>{% endif %}
+<p><a href="{{ links.json }}">Eksportuj ten wynik JSON</a>{% if result.station_id %} · <a href="{{ links.csv }}">Eksportuj ten wynik CSV</a>{% endif %}. Eksport zachowuje wybraną paczkę i limit wierszy.</p>
+<p>Parametry: {{ result.parameters|join:", " }}.</p>
+{% if result.station_id %}
+<h2>Stacja {{ result.station_id }}</h2>
+{% if not result.station_found_in_selected_copies %}<p>Brak wpisu stacji w tej paczce. Sprawdź starszą lub nowszą paczkę; nie oznacza to braku stacji w całym kanale.</p>{% endif %}
+<p>Unikalnych wersji wartości: {{ result.unique_values }}; pokazano {{ result.returned }}. {% if result.truncated %}<strong>Wynik ograniczony limitem; eksport ma ten sam limit.</strong>{% endif %}</p>
+<p>Grupy z rozbieżnymi wartościami dla tego samego czasu i parametru: {{ result.variant_groups }}. Nie wybieramy automatycznie jednej wersji i nie nazywamy różnicy potwierdzoną korektą dostawcy. Identyczne surowe wartości scalono, zachowując identyfikatory kopii.</p>
+<p>Dni UTC z zachowaną niepustą wartością: {{ result.coverage.observed_dates_utc|join:", "|default:"brak" }}.</p>
+<p>Wersje z wartością null: {{ result.null_values }}. Dni z wpisem null i czasem źródłowym: {{ result.coverage.dates_with_timestamped_null_utc|join:", "|default:"brak" }}. Sam null nie potwierdza dostępności pomiaru.</p>
+<p>Dni UTC bez zachowanego odczytu: {{ result.coverage.dates_without_saved_observations_utc|join:", "|default:"brak" }}. Lista dotyczy dostępnych kopii i wybranego filtra, nie dowodzi przerwy u dostawcy. Dni graniczne są częściowe; częstotliwość odczytów niepotwierdzona.</p>
+<div class="scroll"><table><thead><tr><th>Czas UTC</th><th>Parametr</th><th>Surowa wartość</th><th>Warianty</th><th>Kopie</th></tr></thead><tbody>
+{% for row in result.records %}<tr><td>{{ row.time_utc }}</td><td>{{ row.parameter }}</td><td>{% if row.value is None %}brak (null){% else %}{{ row.value }}{% endif %}</td><td>{{ row.value_variants }}</td><td>{{ row.snapshot_ids|join:", " }}</td></tr>{% empty %}<tr><td colspan="5">Brak odczytów w wybranym oknie.</td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}<h2>Dostępne stacje ({{ result.stations|length }})</h2><div class="scroll"><table><thead><tr><th>Identyfikator</th><th>Nazwy z kopii</th></tr></thead><tbody>
+{% for station in result.stations %}<tr><td><a href="{% url 'measurement_history' %}?channel={{ result.channel_id }}&amp;station={{ station.id|urlencode }}&amp;parameter={{ result.parameter|urlencode }}&amp;days={{ form.days.value }}&amp;limit={{ result.limit }}&amp;format=html{% if result.copy_batches.mode == 'batches' %}&amp;copy_page={{ result.copy_batches.page }}&amp;copy_token={{ result.copy_batches.token|urlencode }}{% endif %}">{{ station.id }}</a></td><td>{{ station.names|join:" / " }}</td></tr>{% empty %}<tr><td colspan="2">Brak aktualnych kopii z odczytami dla tego filtra.</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+<p>Pominiętych niepustych wartości bez poprawnego, aktualnego czasu: {{ result.ignored_nonnull_values_without_recent_time }} (odczytany zakres kopii). Brak danych nigdy nie jest zamieniany na zero.</p>
+<p>JSON zawiera raport pokrycia i wszystkie receipts; CSV zawiera receipts wykorzystanych kopii przy każdym wierszu. CSV zabezpiecza tekst przed wykonaniem jako formuła; JSON zachowuje surową reprezentację wartości.</p>
+{% endif %}
+<p>Budżet: do 2000 kopii w spisie, do 25 kopii w paczce, 50 MiB odczytu na zapytanie (lub niższy limit operatora), 5 MiB eksportu, do 1000 wierszy. Tryb pełny nadal odmawia odczytu ponad limit; tryb paczek wybierasz jawnie. Bez nowych zadań i bez zmiany limitu cache.</p>
+<p><a href="{% url 'data_catalog' %}">Kanały danych</a> · <a href="{% url 'registry_readiness' %}">Gotowość rejestru</a></p>
+{% endblock %}

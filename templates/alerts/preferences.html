@@ -1,0 +1,7 @@
+{% extends "registry_base.html" %}
+{% block title %}Ustawienia alertów — GeoKlimat{% endblock %}
+{% block content %}<h1>Ustawienia Twoich alertów</h1>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button>Zapisz</button></form>
+<p>Alerty o zmianach pojawiają się po cyklu harmonogramu. Podsumowanie obejmuje nowe alerty od poprzedniego podsumowania, co24 godziny lub7 dni od włączenia/zmiany ustawień. Puste podsumowania nie powstają.</p>
+<p>Wyłączenie zatrzymuje nowe alerty, zachowując historię. Po ponownym włączeniu pierwszy przebieg zapisuje nowy stan bazowy — bez nadrabiania przerwy. Zmiana częstotliwości rozpoczyna nowy okres podsumowania; wcześniejsze alerty pozostają w skrzynce.</p>
+<p>E-mail nie jest skonfigurowany ani wysyłany. <a href="{% url 'alert_inbox' %}">Wróć do skrzynki</a></p>{% endblock %}

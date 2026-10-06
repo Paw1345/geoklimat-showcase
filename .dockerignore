@@ -1,0 +1,10 @@
+.git
+.serena
+.env*
+backups
+local-data
+data/*.xlsx
+data/*.xls
+__pycache__
+.ruff_cache
+staticfiles

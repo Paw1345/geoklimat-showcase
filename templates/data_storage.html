@@ -1,0 +1,21 @@
+{% extends "registry_base.html" %}{% block content %}
+<h1>Pojemność i retencja cache danych</h1>
+<p>Stan: {{ report.as_of }} · <a href="?format=json">Eksport JSON</a></p>
+<p>Limit logiczny: {{ report.quota_bytes|filesizeformat }} ({{ report.quota_bytes }} bajtów).
+Zadeklarowane zużycie: {{ report.total.declared_bytes|filesizeformat }}.
+Rzeczywiste treści w bazie: {{ report.total.actual_bytes|filesizeformat }}.
+Pozostało w limicie logicznym: {{ report.remaining_logical_bytes|filesizeformat }}.</p>
+{% if report.over_quota_bytes %}<p>Przekroczenie limitu: {{ report.over_quota_bytes|filesizeformat }}.</p>{% endif %}
+{% if report.total.size_mismatches %}<p>Uwaga: {{ report.total.size_mismatches }} kopii ma rozmiar treści niezgodny z deklaracją. Raport nie naprawia danych.</p>{% endif %}
+<p>Wygasłe kopie nadal zapisane: {{ report.total.expired_copies }} ({{ report.total.expired_bytes|filesizeformat }}).
+Fragmenty pobrań: {{ report.total.chunk_copies }} ({{ report.total.chunk_bytes|filesizeformat }}); są częścią tego samego zużycia, nie dodatkową pulą.</p>
+<p>To odczytowy raport cache, nie wolnego miejsca na dysku. Nie obejmuje indeksów PostgreSQL, WAL, kopii zapasowych ani modeli AI.
+Nie usuwa danych i nie resetuje kursorów. Wygasłe bajty nie są już odzyskanym miejscem.</p>
+<p>Okno {{ report.retention_days }} dni dotyczy czasu przechowywania kopii. Daty poniżej są czasami pobrania,
+nie datami pomiarów ani potwierdzeniem kompletnej historii 30 dni. Wygasanie obejmuje termin kopii,
+twardy limit od pobrania i termin zadania plikowego. Nie sprawdzamy dat poszczególnych obserwacji w mieszanych stronach,
+jednostek, kompletności, SHA256 ani możliwości eksportu całego pliku.</p>
+<div class="scroll"><table><thead><tr><th>Kanał</th><th>Kopie / fragmenty</th><th>Treści / deklaracja</th><th>Wygasłe treści</th><th>Błędy rozmiaru</th><th>Niewygasłe kopie: pobranie od–do</th></tr></thead><tbody>
+{% for row in report.channels %}<tr><td><a href="{% url 'data_detail' row.id %}">{{ row.name }}</a></td><td>{{ row.copies }} / {{ row.chunk_copies }}</td><td>{{ row.actual_bytes|filesizeformat }} / {{ row.declared_bytes|filesizeformat }}</td><td>{{ row.expired_bytes|filesizeformat }}</td><td>{{ row.size_mismatches }}</td><td>{{ row.oldest_copy|default:"Brak" }} — {{ row.newest_copy|default:"Brak" }}</td></tr>{% empty %}<tr><td colspan="6">Brak kanałów danych.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

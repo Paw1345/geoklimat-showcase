@@ -1,0 +1,6 @@
+{% extends "registry_base.html" %}{% block title %}{{ heading }} — GeoKlimat{% endblock %}
+{% block content %}<h1>{{ heading }}</h1>
+{% if thread %}<a href="{% url 'change_detail' thread.pk %}">← {{ thread.display_title }}</a>{% endif %}
+{% if item %}<article><h2>{{ item.title }}</h2><p>ID {{ item.pk }} · <a href="{{ item.url }}" rel="noopener noreferrer">Sprawdź oryginał</a> · <a href="{% url 'item_history' item.pk %}">Historia dokumentu</a></p><p>{{ item.summary }}</p></article>{% endif %}
+<p>Zapis jest oceną redakcyjną, nie automatyczną poradą prawną. Sprawdź dowód, odbiorców i zakres. Nie wpisuj danych osobowych odbiorców; ocena i podpis autora będą publiczne.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button>Zapisz</button></form>{% endblock %}

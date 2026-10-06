@@ -1,0 +1,7 @@
+{% extends "registry_base.html" %}{% block title %}GeoKlimat — procesy i akty{% endblock %}{% block content %}
+<h1>Procesy i akty prawne</h1>
+<p>Powiązania według jawnych identyfikatorów lub udokumentowanej oceny redakcyjnej. Podobny tytuł nie łączy dokumentów. <a href="/deadlines/">Zobacz terminy</a>.</p>
+<form method="get"><label for="q">Tytuł lub identyfikator</label><input id="q" name="q" value="{{ q }}" maxlength="200"><label for="jurisdiction">Obszar</label><select id="jurisdiction" name="jurisdiction"><option value="">Wszystkie</option><option value="PL" {% if jurisdiction == 'PL' %}selected{% endif %}>Polska</option><option value="EU" {% if jurisdiction == 'EU' %}selected{% endif %}>UE</option></select><button>Szukaj</button></form>
+{% for process in processes %}<article><small>{{ process.identifier }} · {{ process.get_jurisdiction_display }}</small><h2><a href="{% url 'legal_detail' process.pk %}">{{ process.title }}</a></h2></article>{% empty %}<p>Brak powiązań dla tego widoku. Nie oznacza to braku zmian prawnych.</p>{% endfor %}
+<nav>{% if processes.has_previous %}<a href="?q={{ q|urlencode }}&amp;jurisdiction={{ jurisdiction|urlencode }}&amp;page={{ processes.previous_page_number }}">Poprzednia</a>{% endif %} Strona {{ processes.number }} / {{ processes.paginator.num_pages }} {% if processes.has_next %}<a href="?q={{ q|urlencode }}&amp;jurisdiction={{ jurisdiction|urlencode }}&amp;page={{ processes.next_page_number }}">Następna</a>{% endif %}</nav>
+{% endblock %}

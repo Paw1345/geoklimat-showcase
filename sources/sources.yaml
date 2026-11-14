@@ -1,0 +1,343 @@
+# Źródła RSS i list HTML jako konfiguracja (plan uproszczenia U5, 2026-11-13).
+# Komenda: python manage.py sync_sources [--group NAZWA] [--apply]; domyślnie dry-run, bez HTTP.
+# Parsery rozpoznają źródło po dokładnym (adapter, url, config); selektory zostają w kodzie parsera.
+# Nowe źródła powstają wyłączone i bez zgody na aktywację; audyt i aktywacja jak dotąd.
+# replaces: dawne, nieużywane trasy, które sync może zastąpić (bez pozycji, przebiegów i zgody).
+version: 1
+
+x-import-scope: &import_scope "Lista rozpoznana przez parser lub jawny monitoring tekstu strony. Bez pełnego archiwum."
+
+groups:
+  regional:
+    command: configure_regional
+    note: Sekcje środowiskowe WIOŚ, WFOŚiGW i urzędów marszałkowskich (2026-09-23).
+    defaults:
+      interval_minutes: 120
+      name: "{organization} — środowisko"
+      registry_state: configured
+      scope: "Monitoring publikacji: WIOŚ, WFOŚiGW lub wydzielona sekcja środowiskowa urzędu. Bieżące okno RSS/listy, nie pełne archiwum. Bez pobierania załączników."
+    sources:
+      - registry: 84
+        adapter: feed
+        url: "https://www.wios.lublin.pl/feed/"
+        config: {"strict_endpoint": true}
+      - registry: 99
+        adapter: web
+        url: "https://wfosigw.torun.pl/aktualnosci?field_tags_target_id=All"
+        config: {"regional_listing": "fund_torun"}
+      - registry: 106
+        adapter: feed
+        url: "https://bip.wfosigw.rzeszow.pl/aktualnosci?format=feed&type=rss"
+        config: {"strict_endpoint": true}
+      - registry: 107
+        adapter: feed
+        url: "https://wfosigw.bialystok.pl/feed/"
+        config: {"strict_endpoint": true}
+      - registry: 125
+        adapter: web
+        url: "https://umwd.dolnyslask.pl/zasobyprzyrody/aktualnosci/"
+        config: {"regional_listing": "dolnoslaskie"}
+      - registry: 126
+        adapter: web
+        url: "https://kujawsko-pomorskie.pl/tag/srodowisko/"
+        config: {"regional_listing": "kujawsko"}
+      - registry: 127
+        adapter: feed
+        url: "https://www.lubelskie.pl/kategoria/aktualnosci-srodowisko/feed/"
+        config: {"strict_endpoint": true, "regional_feed": "lubelskie"}
+      - registry: 128
+        adapter: web
+        url: "https://lubuskie.pl/wiadomosci/kategoria/87"
+        config: {"regional_listing": "lubuskie"}
+      - registry: 129
+        adapter: web
+        url: "https://www.lodzkie.pl/srodowisko"
+        config: {"regional_listing": "lodzkie"}
+      - registry: 130
+        adapter: web
+        url: "https://www.malopolska.pl/aktualnosci?f%5B0%5D=aktualnosci%3A262"
+        config: {"regional_listing": "malopolskie"}
+      - registry: 135
+        adapter: web
+        url: "https://pomorskie.eu/srodowisko/"
+        config: {"regional_listing": "pomorskie"}
+      - registry: 133
+        adapter: feed
+        url: "https://podkarpackie.pl/index.php/srodowisko/aktualnosci?format=feed&type=rss"
+        config: {"strict_endpoint": true, "regional_feed": "podkarpackie"}
+      - registry: 140
+        adapter: web
+        url: "https://wzp.pl/dla-mieszkancow/ekologia-i-srodowisko/"
+        config: {"regional_listing": "zachodniopomorskie"}
+      - registry: 139
+        adapter: web
+        url: "https://www.umww.pl/kategoria/aktualnosci-korzystania-i-informacji-o-srodowisku"
+        config: {"regional_listing": "wielkopolskie"}
+      - registry: 137
+        adapter: web
+        url: "https://www.swietokrzyskie.pro/category/urzad-marszalkowski/departamenty/departament-srodowiska/"
+        config: {"regional_listing": "swietokrzyskie"}
+        replaces:
+          - {adapter: feed, url: "https://www.swietokrzyskie.pro/category/urzad-marszalkowski/departamenty/departament-srodowiska/feed/", config: {"strict_endpoint": true}}
+      - registry: 138
+        adapter: feed
+        url: "https://warmia.mazury.pl/srodowisko/aktualnosci?format=feed&type=rss"
+        config: {"strict_endpoint": true}
+
+  regional_rss:
+    command: configure_regional_rss
+    note: Oficjalne RSS aktualności WIOŚ i WFOŚiGW zamiast stron głównych z importu rejestru.
+    defaults:
+      adapter: feed
+      interval_minutes: 120
+      registry_requires: [configured]
+      scope: "Metadane bieżącego okna oficjalnego RSS aktualności: tytuły, daty i linki. Bez autorów, opisów, załączników i archiwum; komunikat o naborze nie jest zweryfikowanym naborem ani dowodem jego aktualności."
+    sources:
+      - registry: 82
+        url: "https://www.wroclaw.wios.gov.pl/feed/"
+        config: {"strict_endpoint": true, "reviewed_regional_rss": 82}
+        replaces:
+          - {adapter: web, url: "https://www.wroclaw.wios.gov.pl/", config: {}, interval_minutes: 120, scope: *import_scope}
+      - registry: 94
+        url: "https://kielce.wios.gov.pl/feed/"
+        config: {"strict_endpoint": true, "reviewed_regional_rss": 94}
+        replaces:
+          - {adapter: web, url: "https://www.kielce.wios.gov.pl/", config: {}, interval_minutes: 120, scope: *import_scope}
+      - registry: 96
+        url: "https://poznan.wios.gov.pl/feed/"
+        config: {"strict_endpoint": true, "reviewed_regional_rss": 96}
+        replaces:
+          - {adapter: web, url: "https://www.poznan.wios.gov.pl/", config: {}, interval_minutes: 120, scope: *import_scope}
+      - registry: 108
+        url: "https://wfos.gdansk.pl/feed/"
+        config: {"strict_endpoint": true, "reviewed_regional_rss": 108}
+        replaces:
+          - {adapter: web, url: "https://wfos.gdansk.pl", config: {}, interval_minutes: 120, scope: *import_scope}
+      - registry: 109
+        url: "https://wfosigw.katowice.pl/feed/"
+        config: {"strict_endpoint": true, "reviewed_regional_rss": 109}
+        replaces:
+          - {adapter: web, url: "https://www.wfosigw.katowice.pl", config: {}, interval_minutes: 120, scope: *import_scope}
+      - registry: 111
+        url: "https://wfosigw.olsztyn.pl/feed/"
+        config: {"strict_endpoint": true, "reviewed_regional_rss": 111}
+        replaces:
+          - {adapter: web, url: "https://wfosigw.olsztyn.pl", config: {}, interval_minutes: 120, scope: *import_scope}
+
+  wfos_news:
+    command: configure_wfos_news
+    note: Listy aktualności WFOŚiGW Zielona Góra i Łódź.
+    defaults:
+      adapter: web
+      interval_minutes: 120
+      registry_requires: [configured]
+    sources:
+      - registry: 101
+        url: "https://wfosigw.zgora.pl/aktualnosci/"
+        config: {"strict_endpoint": true, "wfos_news": 101}
+        scope: "Metadane aktualności WFOŚiGW: tytuł, źródłowa data publikacji i link; 20 najnowszych wpisów z archiwum osadzonego w stronie. Bez opisów, autorów, kontaktów, załączników, otwierania artykułów i pełnego archiwum. Komunikat nie potwierdza aktualnie otwartego naboru."
+        replaces:
+          - {adapter: web, url: "https://www.wfosigw.zgora.pl", config: {}, interval_minutes: 120, scope: *import_scope}
+      - registry: 102
+        url: "https://www.wfosigw.lodz.pl/aktualnosci/"
+        config: {"strict_endpoint": true, "wfos_news": 102}
+        scope: "Metadane aktualności WFOŚiGW: tytuł, źródłowa data publikacji i link; Pierwsza strona listy. Bez opisów, autorów, kontaktów, załączników, otwierania artykułów i pełnego archiwum. Komunikat nie potwierdza aktualnie otwartego naboru."
+        replaces:
+          - {adapter: web, url: "https://www.wfosigw.lodz.pl", config: {}, interval_minutes: 120, scope: *import_scope}
+
+  wios_bydgoszcz:
+    command: configure_wios_bydgoszcz
+    note: Pierwsza strona aktualności WIOŚ Bydgoszcz.
+    sources:
+      - registry: 83
+        adapter: web
+        url: "https://wios.bydgoszcz.pl/aktualnosci/"
+        config: {"strict_endpoint": true, "wios_bydgoszcz": true}
+        interval_minutes: 120
+        registry_requires: [configured]
+        scope: "Metadane pierwszej strony Aktualności WIOŚ Bydgoszcz: tytuły, źródłowe daty dzienne i linki. Bez opisów, kontaktów, autorów, załączników, pełnego archiwum i gwarancji pełnego pokrycia kontroli/awarii."
+        replaces:
+          - {adapter: web, url: "https://www.wios.bydgoszcz.pl/", config: {}, interval_minutes: 120, scope: *import_scope}
+
+  opole_bip:
+    command: configure_opole_bip
+    note: Dwa tematyczne RSS BIP Opolskie; pełna luka rejestru 132 zostaje (needs_endpoint).
+    defaults:
+      adapter: feed
+      registry: 132
+      interval_minutes: 240
+      registry_requires: [needs_endpoint]
+      scope: "BIP Opolskie: metadane bieżącego okna RSS typu treści; tytuły, źródłowe daty i odnośniki. Bez pełnych dokumentów, autorów, kontaktów, załączników, archiwum i dowodu pełnego pokrycia programów/uchwał."
+    sources:
+      - slug: registry-132-bip-notices
+        name: "Ogłoszenia z zakresu ochrony środowiska – BIP Opolskie.pl"
+        url: "https://bip.opolskie.pl/typy-tresci/ogloszenia-z-zakresu-ochrony-srodowiska/feed/"
+        config: {"strict_endpoint": true, "opole_bip": "notices"}
+      - slug: registry-132-bip-register
+        name: "Informacje o środowisku – BIP Opolskie.pl"
+        url: "https://bip.opolskie.pl/typy-tresci/informacje-o-srodowisku/feed/"
+        config: {"strict_endpoint": true, "opole_bip": "register"}
+
+  environment_policies:
+    command: configure_environment_policies
+    note: "KE DG Environment: indeks polityk tematycznych zamiast selektora języka."
+    sources:
+      - registry: 165
+        adapter: web
+        url: "https://environment.ec.europa.eu/index_en"
+        config: {"strict_endpoint": true, "environment_policies": "thematic-groups"}
+        interval_minutes: 240
+        registry_requires: [configured]
+        scope: "Metadane trzech grup i tematów oficjalnego indeksu DG Environment, co 4h. Bez domyślnych dat publikacji, pobierania stron docelowych, pełnych dokumentów i analizy aktualnego stanu prawnego. Nie pełny katalog prawa ani aktualności."
+        replaces:
+          - {adapter: web, url: "https://environment.ec.europa.eu/", config: {}, interval_minutes: 240, scope: *import_scope}
+
+  clima_policies:
+    command: configure_clima_policies
+    note: "KE DG Climate Action: indeks obszarów działań zamiast selektora języka."
+    sources:
+      - registry: 167
+        adapter: web
+        url: "https://climate.ec.europa.eu/areas-action_en"
+        config: {"strict_endpoint": true, "clima_policies": "areas-action"}
+        interval_minutes: 240
+        registry_requires: [configured]
+        scope: "Metadane pięciu sekcji oficjalnego katalogu DG CLIMA Areas of action, co 4h. Tytuły i krótkie opisy kart źródłowych; bez domyślnych dat publikacji, pełnych dokumentów, stron docelowych i analizy aktualnego stanu prawnego."
+        replaces:
+          - {adapter: web, url: "https://climate.ec.europa.eu/", config: {}, interval_minutes: 240, scope: *import_scope}
+
+  mkis_journal:
+    command: configure_mkis_journal
+    note: Dziennik Urzędowy MKiŚ przez rejestr gov.pl zamiast strony.
+    sources:
+      - registry: 4
+        adapter: web
+        url: "https://www.gov.pl/api/data/registers/search?pageId=21328136"
+        config: {"strict_endpoint": true, "mkis_journal": "21328136"}
+        interval_minutes: 120
+        registry_requires: [configured]
+        scope: "Metadane bieżącego rejestru Dziennika Urzędowego MKiŚ na Gov.pl. Daty ogłoszenia, wydania i wejścia w życie rozdzielone; bez treści PDF i archiwum sprzed 1 lipca 2026. Nie potwierdza aktualnego stanu prawnego."
+        replaces:
+          - {adapter: web, url: "https://www.gov.pl/web/klimat/dziennik-urzedowy", config: {}, interval_minutes: 120, scope: *import_scope}
+
+  bdpn_news:
+    command: configure_bdpn_news
+    note: Aktualności Bieszczadzkiego PN z pierwszej strony.
+    sources:
+      - registry: 144
+        adapter: web
+        url: "https://bdpn.gov.pl/aktualnosci"
+        config: {"strict_endpoint": true, "bdpn_news": "first-page"}
+        interval_minutes: 360
+        registry_requires: [configured]
+        scope: "Aktualności Bieszczadzkiego Parku Narodowego z pierwszej strony co 6h. Tytuły, skróty i daty publikacji; bez pełnych artykułów, zdjęć, załączników, paginacji i pełnego archiwum. BIP, plany ochrony i konsultacje wymagają osobnego konektora."
+        replaces:
+          - {adapter: web, url: "https://www.bdpn.pl/", config: {}, interval_minutes: 360, scope: *import_scope}
+
+  opn_news:
+    command: configure_opn_news
+    note: Aktualności Ojcowskiego PN z pierwszej strony.
+    sources:
+      - registry: 151
+        adapter: web
+        url: "https://opn.gov.pl/aktualnosci"
+        config: {"strict_endpoint": true, "opn_news": "first-page"}
+        interval_minutes: 360
+        registry_requires: [configured]
+        scope: "Aktualności Ojcowskiego Parku Narodowego z pierwszej strony co 6h. Tytuły, skróty i daty publikacji; bez pełnych artykułów, zdjęć, załączników, paginacji i pełnego archiwum. BIP, plany ochrony i konsultacje wymagają osobnego konektora."
+        replaces:
+          - {adapter: web, url: "https://www.ojcowskiparknarodowy.pl/", config: {}, interval_minutes: 360, scope: *import_scope}
+
+  wios_lodz:
+    command: configure_wios_lodz
+    note: WIOŚ Łódź, aktualności (zastępują stronę główną) i osobna lista komunikatów.
+    defaults:
+      registry: 86
+      adapter: web
+      interval_minutes: 120
+      registry_requires: [configured]
+      scope: "Metadane pierwszej strony oficjalnej listy WIOŚ Łódź: tytuły, daty dzienne i odnośniki. Bez opisów, autorów, kontaktów, załączników, pełnego archiwum i potwierdzenia pełnego pokrycia kontroli/awarii."
+    sources:
+      - slug: registry-086
+        name: "{organization} — Aktualności"
+        url: "https://www.wios.lodz.pl/Aktualnosci,46"
+        config: {"strict_endpoint": true, "wios_lodz": "news"}
+        replaces:
+          - {adapter: web, url: "https://www.wios.lodz.pl/", config: {}, interval_minutes: 120, scope: *import_scope}
+      - slug: registry-086-notices
+        name: "{organization} — Komunikaty"
+        url: "https://www.wios.lodz.pl/Komunikaty,47"
+        config: {"strict_endpoint": true, "wios_lodz": "notices"}
+
+  p0:
+    command: configure_p0
+    note: "Publiczne trasy P0 (2026-09-18): Geoportal, Ekoportal, KOBiZE, NFOŚiGW, biblioteka INSPIRE."
+    defaults:
+      adapter: web
+      name: "{organization} — {name}"
+      interval_minutes: registry
+      language: registry
+      registry_state: configured
+    sources:
+      - registry: 10
+        url: "https://www.geoportal.gov.pl/pl/aktualnosci/"
+        config: {"listing": "geoportal_news"}
+        scope: "Aktualności Geoportalu: bieżąca strona listy, bez pełnego archiwum."
+      - registry: 11
+        url: "https://www.geoportal.gov.pl/pl/usluga/"
+        config: {"listing": "geoportal_services"}
+        scope: "Katalog opisów usług Geoportalu; nie pobranie danych wszystkich usług."
+      - registry: 17
+        url: "https://www.ekoportal.gov.pl/"
+        config: {"listing": "ekoportal"}
+        scope: "Publiczne aktualności Ekoportalu: okno strony głównej, nie baza PDWD."
+        replaces:
+          - {adapter: web, url: "https://www.ekoportal.gov.pl/", config: {}}
+      - registry: 28
+        url: "https://www.kobize.pl/"
+        config: {"listing": "kobize"}
+        scope: "Publiczne aktualności KOBiZE: okno strony głównej, bez danych kont i raportów."
+        replaces:
+          - {adapter: web, url: "https://www.kobize.pl/", config: {}}
+      - registry: 31
+        url: "https://www.gov.pl/web/nfosigw/harmonogram-naborow"
+        config: {"listing": "nfosigw_calls"}
+        scope: "Wiersze harmonogramu naborów; terminy jako tekst dostawcy, bez danych koordynatorów."
+        replaces:
+          - {adapter: web, url: "https://www.gov.pl/web/nfosigw/nabory", config: {}}
+      - registry: 179
+        url: "https://knowledge-base.inspire.ec.europa.eu/tools/document-library_en"
+        config: {"listing": "inspire_documents", "pagination": "ecl_next", "max_pages": 20}
+        scope: "Biblioteka dokumentów INSPIRE: wszystkie strony do limitu 20; metadane, bez plików."
+        replaces:
+          - {adapter: web, url: "https://knowledge-base.inspire.ec.europa.eu/", config: {}}
+
+  bdpn_plan:
+    command: configure_bdpn_plan
+    note: "Osobna strona planu ochrony w BIP BdPN, obok aktualności."
+    sources:
+      - slug: registry-144-protection-plan
+        registry: 144
+        name: "BDPN — Plan ochrony BIP"
+        adapter: web
+        url: "https://bdpn.gov.pl/bip/plan-ochrony"
+        config: {"strict_endpoint": true, "bdpn_plan": "bip-page"}
+        interval_minutes: 1440
+        registry_requires: [configured]
+        reuse_notes: ""
+        scope: "Sekcja Plan ochrony BIP BDPN co24h: metryka strony, odnośnik ISAP i metadane załączników PDF/SHP-ZIP. Bez plików, rozpakowywania ZIP, weryfikacji aktu, pełnego BIP i konsultacji. Czasy źródłowe bez strefy zachowane jako tekst; publikacja z dokładnością do dnia."
+
+  opn_documents:
+    command: configure_opn_documents
+    note: "Osobny katalog dokumentów ochronnych OPN, obok aktualności."
+    sources:
+      - slug: registry-151-protection-documents
+        registry: 151
+        name: "OPN — katalog dokumentów ochronnych"
+        adapter: web
+        url: "https://opn.gov.pl/dzialalnosc-ochronna"
+        config: {"strict_endpoint": true, "opn_documents": "protection-catalogue"}
+        interval_minutes: 1440
+        registry_requires: [configured]
+        reuse_notes: ""
+        scope: "Katalog dokumentów działalności ochronnej OPN co 24h: nazwy, linki i deklarowane rozmiary PDF oraz wskazany przez park plan w ISAP. Bez pobierania plików, weryfikacji ich treści i obowiązywania prawa. Daty publikacji niepodane; bez pełnego BIP, konsultacji i archiwum."

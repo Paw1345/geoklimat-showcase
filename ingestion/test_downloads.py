@@ -53,9 +53,36 @@ class DownloadTests(TestCase):
         self.assertEqual(job.pk, same.pk)
         self.assertFalse(DataSnapshot.objects.exists())
 
+    def approve_limit(self, limit):
+        self.channel.config = {"max_file_bytes": limit}
+        self.channel.save(update_fields=["config"])
+
+    def test_default_limit_blocks_file_over_50_mib_before_any_chunk(self):
+        out = io.StringIO()
+        call_command("queue_download", source="file", stdout=out)
+        self.assertIn(f"per-file limit {50 * 1024 * 1024} bytes", out.getvalue())
+        job, _ = enqueue(self.channel)
+        transport = Mock()
+        transport.get.return_value = self.http(total=50 * 1024 * 1024 + 1)
+        with patch("ingestion.downloads.Client", return_value=transport):
+            result = run_downloads()
+        self.assertEqual(result[0]["status"], "blocked")
+        self.assertEqual(result[0]["error"], "File exceeds the approved per-file limit")
+        job.refresh_from_db()
+        self.assertEqual((job.offset, job.chunks.count()), (0, 0))
+        self.assertFalse(DataSnapshot.objects.exists())
+
+    def test_invalid_per_file_limit_rejected_before_queue(self):
+        for limit in ("60000000", 0, True):
+            self.approve_limit(limit)
+            with self.assertRaises(FetchError):
+                enqueue(self.channel)
+        self.assertFalse(DownloadJob.objects.exists())
+
     def test_file_larger_than_legacy_50_mib_limit(self):
         from ingestion.downloads import CHUNK_BYTES
 
+        self.approve_limit(60 * 1024 * 1024)
         job, _ = enqueue(self.channel)
         block = b"x" * CHUNK_BYTES
         total = CHUNK_BYTES * 14  # 56 MiB; bounded chunks, never one large buffer.
@@ -217,6 +244,7 @@ class DownloadTests(TestCase):
         self.assertEqual(DataSnapshot.objects.count(), 1)
 
     def test_fifteen_gb_file_can_start_and_quota_remains_retryable(self):
+        self.approve_limit(15_000_000_000)
         job, _ = enqueue(self.channel)
         transport = Mock()
         transport.get.return_value = self.http(total=15_000_000_000)

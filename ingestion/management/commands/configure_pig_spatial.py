@@ -7,7 +7,9 @@ from ingestion.service import batch_lock
 
 
 class Command(BaseCommand):
-    help = "Prepare three disabled PIG polygon scans; dry-run default, existing channels untouched."
+    help = (
+        "Prepare disabled reviewed PIG spatial scans; dry-run default, existing channels untouched."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("--apply", action="store_true")
@@ -45,7 +47,7 @@ class Command(BaseCommand):
                         attribution=attribution(key),
                         enabled=False,
                         access_approved=False,
-                        interval_minutes=1440,
+                        interval_minutes=p.get("interval", 1440),
                     )
             if not options["apply"]:
                 self.stdout.write("Dry-run; no writes or HTTP")

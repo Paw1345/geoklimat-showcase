@@ -122,8 +122,12 @@ def parse_procedure(source, response):
     events = dated_rows(
         section(main, "section3", "Key events"), ["Date", "Event", "Reference", "Summary"]
     )
-    forecasts = dated_rows(
-        section(main, "section4", "Forecasts"), ["Date", "Subject"], forecast=True
+    # OEIL omits the Forecasts section when the procedure has none; two matches still fail.
+    forecasts_present = bool(main.select("#section4"))
+    forecasts = (
+        dated_rows(section(main, "section4", "Forecasts"), ["Date", "Subject"], forecast=True)
+        if forecasts_present
+        else []
     )
     return [
         Entry(
@@ -140,6 +144,8 @@ def parse_procedure(source, response):
                 "listing_scope": "status_events_forecasts",
                 "full_document_downloaded": False,
                 "eurlex_reference_url": LEGACY_URL,
+                # Marked only when absent, so digests of snapshots with the section stay stable.
+                **({} if forecasts_present else {"source_forecasts_section_absent": True}),
             },
         )
     ]

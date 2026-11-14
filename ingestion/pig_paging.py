@@ -10,8 +10,17 @@ from django.utils import timezone
 from ingestion.data_paging import digest
 from ingestion.data_service import store_snapshot
 from ingestion.models import DataHarvest
-from ingestion.pig_data import DETAIL_TERMS, LABELS, TERMS, channel_url, read, validate_geometry
+from ingestion.pig_data import (
+    DETAIL_TERMS,
+    LABELS,
+    TERMS,
+    channel_url,
+    read,
+    validate_geometry,
+    validate_point,
+)
 from ingestion.transport import FetchError
+from ingestion.worker_stop import requested as stop_requested
 
 PAGE_SIZE = 100
 ATTRIBUTION = (
@@ -53,12 +62,44 @@ def validate_profile(channel):
         raise FetchError("MIDAS scan outside reviewed profile")
 
 
+def validate_feature_geometry(channel, geometry):
+    """Reviewed point layers take points; every other scan stays polygon-only."""
+    if channel.config.get("mode") == "pig_spatial_scan":
+        from ingestion.pig_spatial import profile
+
+        if profile(channel)["geometry"] == "Point":
+            validate_point(geometry)
+            return
+    validate_geometry(geometry)
+
+
 def page_size(channel):
     if channel.config.get("mode") == "pig_spatial_scan":
         from ingestion.pig_spatial import profile
 
         return profile(channel)["limit"]
     return PAGE_SIZE
+
+
+def spatial_option(channel, key, default):
+    if channel.config.get("mode") == "pig_spatial_scan":
+        from ingestion.pig_spatial import profile
+
+        return profile(channel).get(key, default)
+    return default
+
+
+def max_ids(channel):
+    return spatial_option(channel, "max_ids", 100000)
+
+
+def count_matches(channel, client, total):
+    count = read(
+        client,
+        channel.url + "?" + urlencode({"f": "json", "where": "1=1", "returnCountOnly": "true"}),
+    ).get("count")
+    if type(count) is not int or count != total:
+        raise FetchError("MIDAS count changed; cursor not advanced")
 
 
 def manifest(channel, client):
@@ -76,7 +117,7 @@ def manifest(channel, client):
         data.get("objectIdFieldName") != "OBJECTID"
         or not isinstance(ids, list)
         or not ids
-        or len(ids) > 100000
+        or len(ids) > max_ids(channel)
         or any(type(i) is not int or not 0 <= i <= 2**53 for i in ids)
         or len(set(ids)) != len(ids)
     ):
@@ -129,7 +170,7 @@ def fetch_page(channel, client, expected, total, scope_hash):
             or feature["properties"]["OBJECTID"] != identity
         ):
             raise FetchError("MIDAS scan identity/order mismatch")
-        validate_geometry(feature.get("geometry"))
+        validate_feature_geometry(channel, feature.get("geometry"))
     if data.get("exceededTransferLimit", False) is not False:
         raise FetchError("MIDAS exact-ID page truncated")
     spatial = channel.config.get("mode") == "pig_spatial_scan"
@@ -194,17 +235,25 @@ def advance(channel, client):
             harvest = DataHarvest.objects.create(
                 channel=channel, config_hash=scope_hash, start_url=url, next_url=url
             )
-        for _ in range(2):
-            if harvest.pages >= 100000 // page_size(channel) or harvest.records >= len(ids):
+        for _ in range(spatial_option(channel, "pages_per_call", 2)):
+            # Each page commits with its cursor; a stop request resumes from here.
+            if stop_requested():
+                break
+            if harvest.pages >= max_ids(channel) // page_size(channel) or harvest.records >= len(
+                ids
+            ):
                 raise FetchError("MIDAS scan cursor or page budget inconsistent")
             expected = ids[harvest.records : harvest.records + page_size(channel)]
             if harvest.next_url != page_url(channel, expected):
                 raise FetchError("MIDAS cursor outside pinned identity set")
             payload, media, summary = fetch_page(channel, client, expected, len(ids), scope_hash)
-            # Pin the entire identity set, including deletions/additions with equal count.
-            if manifest(channel, client)[1] != scope_hash:
-                raise FetchError("MIDAS identity manifest changed; cursor not advanced")
             end = harvest.records + len(expected)
+            # Pin the entire identity set, including deletions/additions with equal count.
+            # Count-only profiles re-read the full set at the next call and before the end.
+            if spatial_option(channel, "page_check", "manifest") == "count" and end < len(ids):
+                count_matches(channel, client, len(ids))
+            elif manifest(channel, client)[1] != scope_hash:
+                raise FetchError("MIDAS identity manifest changed; cursor not advanced")
             next_url = (
                 page_url(channel, ids[end : end + page_size(channel)]) if end < len(ids) else ""
             )

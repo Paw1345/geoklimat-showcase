@@ -1,5 +1,9 @@
+from datetime import UTC, datetime
+
 from django.contrib.postgres.indexes import GinIndex
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.postgres.search import SearchVectorField
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.utils import timezone
 
@@ -12,6 +16,8 @@ from ingestion.change_models import (  # noqa: F401
     ThreadWatch,
 )
 from ingestion.legal_models import LegalEvent, LegalLink, LegalProcess, LegalRelation  # noqa: F401
+from ingestion.marine_history import MarineAuditRecord, MarineProfileState  # noqa: F401
+from ingestion.marine_models import MarineCatalogueReport  # noqa: F401
 from ingestion.search import document_vector
 
 
@@ -114,6 +120,7 @@ class DataChannel(models.Model):
             ("geojson", "GeoJSON / WFS"),
             ("stac", "Sceny STAC"),
             ("file", "Plik na żądanie"),
+            ("table", "Tabele rejestrów (pliki XLSX)"),
         ],
     )
     url = models.URLField(max_length=1500)
@@ -186,6 +193,75 @@ class DataSnapshot(models.Model):
         ordering = ["-fetched_at", "-pk"]
 
 
+class CollectionAttempt(models.Model):
+    """Terminal metadata only; insertion is gated separately from live migration."""
+
+    channel = models.ForeignKey(
+        DataChannel, on_delete=models.PROTECT, related_name="collection_attempts", db_index=False
+    )
+    attempt_id = models.UUIDField(unique=True)
+    batch_id = models.UUIDField(null=True, blank=True)
+    origin = models.CharField(
+        max_length=8, choices=[("unknown", "Unknown"), ("manual", "Manual"), ("worker", "Worker")]
+    )
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(db_index=True)
+    due_at = models.DateTimeField(null=True, blank=True)
+    interval_minutes = models.PositiveIntegerField(validators=[MinValueValidator(15)])
+    profile_sha256 = models.CharField(max_length=64, validators=[RegexValidator(r"^[0-9a-f]{64}$")])
+    outcome = models.CharField(
+        max_length=10,
+        choices=[(value, value) for value in ("stored", "unchanged", "failed", "busy")],
+    )
+    reason_code = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[(value, value) for value in ("", "collection_failed", "lock_busy")],
+    )
+
+    class Meta:
+        indexes = [models.Index(fields=["channel", "started_at"], name="attempt_channel_started")]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(finished_at__gte=models.F("started_at")),
+                name="attempt_time_order",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(origin__in=["unknown", "manual", "worker"]),
+                name="attempt_origin",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(origin="worker")
+                | models.Q(batch_id__isnull=False, due_at__isnull=False),
+                name="attempt_worker_context",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(interval_minutes__gte=15), name="attempt_interval"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(profile_sha256__regex=r"^[0-9a-f]{64}$"),
+                name="attempt_profile_hash",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(outcome__in=["stored", "unchanged"], reason_code="")
+                | models.Q(outcome="failed", reason_code="collection_failed")
+                | models.Q(outcome="busy", reason_code="lock_busy"),
+                name="attempt_outcome_reason",
+            ),
+        ]
+
+    def clean(self):
+        for field in ("started_at", "finished_at", "due_at"):
+            value = getattr(self, field)
+            if isinstance(value, datetime):
+                if timezone.is_naive(value):
+                    raise ValidationError({field: "Aware timestamp required"})
+                setattr(self, field, value.astimezone(UTC))
+        if isinstance(self.started_at, datetime) and isinstance(self.finished_at, datetime):
+            if self.finished_at < self.started_at:
+                raise ValidationError({"finished_at": "Finish precedes start"})
+
+
 class Item(models.Model):
     source = models.ForeignKey(Source, on_delete=models.PROTECT, related_name="items")
     external_id = models.CharField(max_length=64)
@@ -205,6 +281,10 @@ class Item(models.Model):
     date_precision = models.CharField(max_length=12, default="unknown")
     duplicate_key = models.CharField(max_length=64, blank=True, db_index=True)
     revision = models.PositiveIntegerField(default=0)
+    # Stored so ranking reads the vector instead of rebuilding it per hit (S9b, 2026-10-16).
+    search_document = models.GeneratedField(
+        expression=document_vector(), output_field=SearchVectorField(), db_persist=True
+    )
     publication = models.ForeignKey(
         "Publication", null=True, blank=True, on_delete=models.PROTECT, related_name="items"
     )
@@ -216,7 +296,7 @@ class Item(models.Model):
         ]
         indexes = [
             models.Index(fields=["-first_seen_at"]),
-            GinIndex(document_vector(), name="item_document_search_gin"),
+            GinIndex(fields=["search_document"], name="item_search_document_gin"),
         ]
 
     def __str__(self):

@@ -1,6 +1,9 @@
 FROM python:3.13-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 RUFF_NO_CACHE=true
 WORKDIR /app
+# rasterio's bundled GDAL needs the system expat library.
+RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt requirements-dev.txt ./
 RUN pip install -r requirements.txt
 RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --no-create-home app

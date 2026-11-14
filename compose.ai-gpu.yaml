@@ -1,0 +1,12 @@
+# Optional GPU overlay for local AI (NVIDIA): add after compose.ai.yaml, e.g.
+# docker compose -f compose.yaml -f compose.ai.yaml -f compose.ai-gpu.yaml up -d --no-deps ollama
+# Without it Ollama runs on CPU only. Requires Docker with the NVIDIA runtime.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

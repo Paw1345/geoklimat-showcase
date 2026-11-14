@@ -35,6 +35,8 @@ services:
     env_file: .env.production
     command: python manage.py ingestion_worker
     restart: unless-stopped
+    # SIGTERM finishes the current channel/page; also applies to `up -d` recreation.
+    stop_grace_period: 120s
     depends_on:
       db:
         condition: service_healthy

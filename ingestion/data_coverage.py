@@ -1,4 +1,4 @@
-"""Read-only PIG identity-scan coverage; metadata availability is not payload integrity."""
+"""Read-only identity-scan coverage; metadata availability is not payload integrity."""
 
 import hashlib
 import json
@@ -10,10 +10,9 @@ from django.utils import timezone
 from ingestion.data_paging import digest
 from ingestion.models import DataSnapshot
 from ingestion.observations import retention_window
-from ingestion.pig_data import validate_geometry
 from ingestion.transport import FetchError
 
-MODES = {"pig_midas_scan", "pig_spatial_scan"}
+MODES = {"pig_midas_scan", "pig_spatial_scan", "bdl_features_scan"}
 
 
 def coverage_report(
@@ -28,7 +27,7 @@ def coverage_report(
     now = now or timezone.now()
     channel = harvest.channel
     if channel.config.get("mode") not in MODES:
-        raise FetchError("Coverage supports only reviewed PIG identity scans")
+        raise FetchError("Coverage supports only reviewed identity scans")
     rows = list(
         channel.snapshots.filter(summary__harvest_id=harvest.pk, download_job__isnull=True)
         .order_by("pk")
@@ -41,6 +40,19 @@ def coverage_report(
     seen = set()
     totals = set()
     limit = channel.config.get("feature_limit")
+    from ingestion.pig_paging import max_ids
+
+    try:
+        if channel.config.get("mode") == "bdl_features_scan":
+            from ingestion.bdl_paging import validate_profile
+
+            _, profile = validate_profile(channel)
+            ceiling = profile["max_count"]
+        else:
+            ceiling = max_ids(channel)
+    except FetchError:
+        issues.add("budget_or_profile")
+        ceiling = 0
     if type(limit) is not int or limit <= 0 or len(rows) > 10000:
         issues.add("budget_or_profile")
         rows = []
@@ -59,7 +71,7 @@ def coverage_report(
             or type(records) is not int
             or not 0 < records <= limit
             or type(total) is not int
-            or not 0 < total <= 100000
+            or not 0 < total <= ceiling
         ):
             issues.add("invalid_metadata")
             continue
@@ -82,6 +94,14 @@ def coverage_report(
         and len(available) == harvest.pages
         and available_records == harvest.records
     )
+    geometry = None
+    if channel.config.get("mode") == "bdl_features_scan":
+        from ingestion.bdl_coverage import geometry_metadata
+
+        geometry = geometry_metadata(available, channel.config.get("geometry") is True, full)
+        if geometry["invalid_metadata"]:
+            issues.add("invalid_geometry_metadata")
+            full = False
     report = {
         "channel": channel.slug,
         "harvest_id": harvest.pk,
@@ -95,13 +115,17 @@ def coverage_report(
         "available_records": available_records,
         "available_bytes": available_bytes,
         "export_limit_bytes": settings.DATA_MANUAL_MAX_BYTES,
-        "export_eligible": full and available_bytes <= settings.DATA_MANUAL_MAX_BYTES,
+        "export_eligible": full
+        and available_bytes <= settings.DATA_MANUAL_MAX_BYTES
+        and geometry is None,
         "unavailable_pages": max(0, harvest.pages - len(available)),
         "full_metadata_coverage": full,
         "issues": sorted(issues),
         "payload_check": "not_checked",
         "scope_verified": False,
     }
+    if geometry is not None:
+        report["geometry"] = geometry
     if verify_payloads:
         selected = available
         if copy_ids is not None:
@@ -161,9 +185,11 @@ def _verify(harvest, rows, full, on_page=None):
     """Stream one bounded page at a time. Never retrieve missing/expired copies."""
     ids = []
     try:
-        from ingestion.pig_paging import validate_profile
+        from ingestion.pig_paging import validate_feature_geometry, validate_profile
 
-        validate_profile(harvest.channel)
+        bdl = harvest.channel.config.get("mode") == "bdl_features_scan"
+        if not bdl:
+            validate_profile(harvest.channel)
         for row in sorted(rows, key=lambda r: r["summary"]["page"]):
             if not 0 < row["size_bytes"] <= settings.DATA_AUTO_MAX_BYTES:
                 raise FetchError("invalid_size")
@@ -171,6 +197,14 @@ def _verify(harvest, rows, full, on_page=None):
             raw = bytes(snapshot.payload)
             if len(raw) != row["size_bytes"] or hashlib.sha256(raw).hexdigest() != row["sha256"]:
                 raise FetchError("checksum_mismatch")
+            if bdl:
+                from ingestion.bdl_coverage import verify_page
+
+                data = verify_page(harvest, row, raw)
+                ids.extend(feature["id"] for feature in data["features"])
+                if on_page:
+                    on_page(data, row)
+                continue
             data = json.loads(raw)
             features = data.get("features")
             p = data.get("geoklimat_provenance")
@@ -195,12 +229,15 @@ def _verify(harvest, rows, full, on_page=None):
                     or feature.get("properties", {}).get("OBJECTID") != identity
                 ):
                     raise FetchError("payload_identity_mismatch")
-                validate_geometry(feature.get("geometry"))
+                validate_feature_geometry(harvest.channel, feature.get("geometry"))
                 ids.append(identity)
             if on_page:
                 on_page(data, row)
         channel = harvest.channel
-        if (
+        if bdl:
+            if full and ids != list(range(1, harvest.records + 1)):
+                raise FetchError("BDL retained identity sequence mismatch")
+        elif (
             full
             and digest([channel.url, channel.kind, channel.region, channel.config, ids])
             != harvest.config_hash
@@ -216,6 +253,8 @@ def _verify(harvest, rows, full, on_page=None):
 
 def write_verified_export(harvest, now, stream):
     """Caller holds a read-only consistent transaction. Output is temporary, never cache."""
+    if harvest.channel.config.get("mode") == "bdl_features_scan":
+        raise FetchError("Combined BDL export unavailable; use original page downloads")
     report = coverage_report(harvest, now)
     if not report["full_metadata_coverage"]:
         raise FetchError("Full copy coverage unavailable")

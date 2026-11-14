@@ -1,0 +1,43 @@
+{% extends "registry_base.html" %}
+{% block title %}Uwolnienia PRTR — Polska 2017 · GeoKlimat{% endblock %}
+{% block content %}
+<h1>Uwolnienia PRTR — Polska, 2017</h1>
+<p><a href="{% url 'data_detail' channel.pk %}">Szczegół kanału i kopie</a> · <a href="{% url 'registry_detail' channel.registry.registry_id %}">Rejestr źródła</a> · <a href="{{ channel.url }}">Oryginalny XML</a></p>
+<p>Roczne uwolnienia w kg/rok, nie bieżące pomiary ani alert zdrowotny. Ilość przypadkowa jest częścią całkowitej — nie dodajemy ich. Substancje i metody jako kody źródłowe, bez tłumaczenia. Bez transferów, odpadów, geometrii i pełnej walidacji XSD.</p>
+<form method="get">
+  {{ form.non_field_errors }}
+  {% for field in form.visible_fields %}<p>{{ field.label_tag }} {{ field }} {{ field.errors }}</p>{% endfor %}
+  {{ form.snapshot }}
+  {% if form.page.errors %}<p role="alert">{{ form.page.errors }}</p>{% endif %}
+  {% if form.snapshot.errors %}<p role="alert">{{ form.snapshot.errors }}</p>{% endif %}
+  <datalist id="prtr-pollutants">{% for code in pollutants %}<option value="{{ code }}"></option>{% endfor %}</datalist>
+  <p>Zakład: fragment nazwy lub id. Substancja: dokładny kod z kopii. Nazwa/id zakładu i kod substancji bez rozróżniania wielkości liter.</p>
+  <button type="submit">Filtruj</button> <a href="{{ request.path }}">Wybierz najnowszą kopię i wyczyść filtry</a>
+</form>
+{% if error %}<p role="alert">{{ error }}</p>
+{% elif copy %}
+<section aria-labelledby="copy-heading">
+  <h2 id="copy-heading">Wybrana kopia #{{ copy.snapshot.pk }}</h2>
+  <p>{{ channel.attribution }}</p>
+  <p>Pobrano {{ copy.snapshot.fetched_at }}. Ważna do {{ copy.expires_at }}. Retencja 30 dni od pobrania, nie od roku 2017. Ta strona i kolejne strony korzystają z tej samej kopii.</p>
+  <p>Wszystkie uwolnienia w kopii: {{ copy.summary.records }}. Dopasowania: {{ page.paginator.count }}. Strona {{ page.number }} z {{ page.paginator.num_pages }} (do 50 rekordów).</p>
+  <p>SHA JSON: <code class="checksum">{{ copy.snapshot.sha256 }}</code><br>SHA źródłowego XML: <code class="checksum">{{ copy.summary.source_sha256 }}</code></p>
+  <p><a href="{% url 'data_download' copy.snapshot.pk %}">Pobierz całą kopię JSON</a> — nie tylko filtrowane wyniki. <a href="{{ links.current }}">Link do tego wyboru kopii i filtrów</a></p>
+  <p>Brak ilości całkowitej w kopii: {{ copy.summary.missing_total }}, przypadkowej: {{ copy.summary.missing_accidental }}. Wykluczone zakłady: {{ copy.summary.excluded_facilities }}, uwolnienia: {{ copy.summary.excluded_releases }}. Pominięte transfery substancji: {{ copy.summary.skipped_pollutant_transfers }}, odpadów: {{ copy.summary.skipped_waste_transfers }}. Nie jest to pełny PRTR.</p>
+</section>
+{% if page.paginator.count %}
+<div class="scroll" role="region" aria-label="Tabela uwolnień PRTR, przewijana poziomo" tabindex="0">
+<table>
+  <caption>Uwolnienia PL2017 — strona {{ page.number }}. Brak danych nie oznacza zera.</caption>
+  <thead><tr><th scope="col">Id zakładu</th><th scope="col">Nazwa zakładu</th><th scope="col">Medium</th><th scope="col">Kod substancji</th><th scope="col">Metoda</th><th scope="col">Ilość całkowita (kg/rok)</th><th scope="col">Ilość przypadkowa (kg/rok)</th></tr></thead>
+  <tbody>{% for row in page %}<tr><td>{{ row.facility_id }}</td><td>{{ row.facility_name|default_if_none:"brak danych" }}</td><td>{{ row.medium_code }}</td><td>{{ row.pollutant_code }}</td><td>{{ row.method_code }}</td><td>{{ row.total_quantity|default_if_none:"brak danych" }}</td><td>{{ row.accidental_quantity|default_if_none:"brak danych" }}</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% else %}<p role="status">Brak dopasowań do wybranych filtrów w tej kopii.</p>{% endif %}
+<nav aria-label="Strony wyników PRTR">
+{% if links.previous %}<a href="{{ links.previous }}" rel="prev">Poprzednia strona</a>{% endif %}
+ · {{ page.number }} / {{ page.paginator.num_pages }} ·
+{% if links.next %}<a href="{{ links.next }}" rel="next">Następna strona</a>{% endif %}
+</nav>
+{% elif not form.errors %}<p role="status">Brak aktualnej kopii. Rejestracja kanału nie oznacza dostępnych danych; ten widok nie uruchamia pobierania.</p>{% endif %}
+{% endblock %}

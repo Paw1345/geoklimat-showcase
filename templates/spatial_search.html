@@ -2,11 +2,12 @@
 {% block title %}Wyszukiwanie przestrzenne — GeoKlimat{% endblock %}
 {% block content %}
 <h1>Wyszukiwanie przestrzenne w lokalnych kopiach</h1>
-<p>Przeszukujemy zweryfikowane, niewygasłe kopie PIG/MIDAS. Bez nowych żądań sieciowych, zadań pobierania i zmian danych.</p>
+<p>Przeszukujemy zweryfikowane, niewygasłe kopie PIG/MIDAS i BDL. Bez nowych żądań sieciowych, zadań pobierania i zmian danych.</p>
 <p><strong>Wybierz przecięcie rzeczywistej geometrii lub starszy tryb obwiedni.</strong>
 Tryb geometrii uwzględnia otwory i rozłączne części, odrzuca niepoprawną topologię
-bez naprawy. To planarne obliczenia we współrzędnych WGS84, nie maska granic Polski/UE
-ani obliczenia geodezyjne. Nie przycinamy geometrii i nie potwierdzamy stanu prawnego.</p>
+bez naprawy. To planarne obliczenia we współrzędnych WGS84, nie obliczenia geodezyjne.
+Tryby z maską dodatkowo wymagają przecięcia z przypiętą maską Polski lub UE
+(styk z granicą liczy się do zakresu, otwory maski nie). Nie przycinamy geometrii i nie potwierdzamy stanu prawnego.</p>
 <p>WGS84/EPSG:4326, kolejność: długość, szerokość. Budżet odczytu do50MiB lub niższego limitu ręcznego, wynik do5MiB i500 obiektów.</p>
 <form method="get">{{ form.as_p }}<button>Wyszukaj / eksportuj</button></form>
 <p>Paczki: wpisz1 i wybierz mały limit wyników, jeśli cały zbiór przekracza budżet.
@@ -16,7 +17,16 @@ Zmieniając filtry, rozpocznij nowy przegląd bez starego tokena.</p>
 {% if error %}<p role="alert">{{ error }}</p>{% endif %}
 {% if result %}
 <h2>Wynik</h2>
-{% if result.geoklimat_query.exact_geometry_intersection %}
+{% if result.geoklimat_query.missing_geometry_records %}<p role="status"><strong>WARN — pominięto {{ result.geoklimat_query.missing_geometry_records }} rekordów z jawnym brakiem geometrii w odczytanych kopiach. Nie można ustalić ich położenia. Pozostają w oryginalnych plikach; wynik nie obejmuje wszystkich rekordów zbioru.</strong></p>{% endif %}
+{% if result.geoklimat_query.administrative_mask_verified %}
+{% with mask=result.geoklimat_query.administrative_mask relations=result.geoklimat_query.mask_relations_in_bbox %}
+<p>Metoda: przecięcie geometrii z prostokątem i maską {{ mask.region }}, planarne WGS84, ze stykiem granic.
+Maska: {{ mask.source }}, wersja {{ mask.version }}, {{ mask.crs }}, SHA-256 {{ mask.sha256|truncatechars:17 }}.
+{{ mask.attribution }}. W prostokącie: wewnątrz {{ relations.inside }}, na granicy {{ relations.boundary }},
+poza maską {{ relations.outside }}. Zweryfikowano topologię {{ result.geoklimat_query.topology_verified_features }} obiektów.
+Obiekty nie są przycinane.</p>
+{% endwith %}
+{% elif result.geoklimat_query.exact_geometry_intersection %}
 <p>Metoda: przecięcie geometrii z prostokątem, planarne WGS84, ze stykiem granic.
 Zweryfikowano topologię {{ result.geoklimat_query.topology_verified_features }} obiektów
 i {{ result.geoklimat_query.geometry_positions_checked }} pozycji współrzędnych.
@@ -49,7 +59,7 @@ Każda strona ponownie sprawdza wszystkie kopie wybranej paczki; limit dotyczy l
 <p>Znaleziono {% if result.geoklimat_query.copy_batch %}w wybranej paczce{% else %}w dostępnych kopiach{% endif %}: {{ result.geoklimat_query.matches_in_available_copies }}. Zwrócono: {{ result.geoklimat_query.returned }}. Limit: {{ result.geoklimat_query.limit }}. {% if result.geoklimat_query.truncated %}<strong>Wynik ograniczony limitem.</strong>{% endif %}</p>
 {% if result.geoklimat_query.full_scope_verified %}<p>Zweryfikowano cały przypięty spis dostępnych kopii — nie jednoczasową wersję danych u dostawcy.</p>{% else %}<p><strong>Niepełne pokrycie: wynik dotyczy wyłącznie dostępnych kopii. Brak trafień nie dowodzi braku obiektów w obszarze.</strong></p>{% endif %}
 <p>{{ result.geoklimat_query.attribution }}</p>
-<div class="scroll"><table><thead><tr><th>ID źródłowe</th><th>Wybrane atrybuty (skrócony podgląd)</th></tr></thead><tbody>
+<div class="scroll" role="region" aria-label="Wyniki wyszukiwania przestrzennego, tabela przewijana poziomo" tabindex="0"><table><thead><tr><th scope="col">ID źródłowe</th><th scope="col">Wybrane atrybuty (skrócony podgląd)</th></tr></thead><tbody>
 {% for feature in previews %}<tr><td>{{ feature.id }}</td><td>{% for key,value in feature.properties %}<p>{{ key }}: {{ value }}</p>{% endfor %}</td></tr>{% empty %}<tr><td colspan="2">Brak trafień w sprawdzonych kopiach.</td></tr>{% endfor %}
 </tbody></table></div>
 <p>GeoJSON zawiera pełne wybrane obiekty oraz raport pokrycia, daty i skróty kopii. Wybierz „Plik GeoJSON” w formularzu i ponów zapytanie.</p>

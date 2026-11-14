@@ -72,6 +72,77 @@ class StacRefreshTests(TransactionTestCase):
         self.assertFalse(budget["additional_collection_approved"])
         self.assertEqual(budget["future_expiry_credited_bytes"], 0)
 
+    def test_complete_with_cursor_does_not_confirm_pagination_for_any_mode(self):
+        for mode, channel in (
+            ("history", self.channel),
+            ("recent", self.head),
+            ("bounded", self.bounded),
+        ):
+            with self.subTest(mode=mode):
+                harvest = channel.harvests.first()
+                channel.harvests.update(
+                    status="complete", next_url=harvest.start_url + "&token=next"
+                )
+                result = plan(self.now)["rows"][0][mode]
+                self.assertTrue(result["profile_valid"])
+                self.assertEqual(result["state"], "complete")
+                self.assertFalse(result["scan_complete"])
+
+    def test_complete_without_cursor_confirms_only_pagination_for_any_mode(self):
+        for mode, channel in (
+            ("history", self.channel),
+            ("recent", self.head),
+            ("bounded", self.bounded),
+        ):
+            with self.subTest(mode=mode):
+                channel.harvests.update(status="complete", next_url="")
+                row = plan(self.now)["rows"][0]
+                self.assertTrue(row[mode]["profile_valid"])
+                self.assertEqual(row[mode]["state"], "complete")
+                self.assertTrue(row[mode]["scan_complete"])
+                self.assertFalse(row["full_current_30_day_coverage_verified"])
+                self.assertIsNone(row["missing_scene_count"])
+
+    def test_noncomplete_status_never_confirms_pagination_with_or_without_cursor(self):
+        for mode, channel in (
+            ("history", self.channel),
+            ("recent", self.head),
+            ("bounded", self.bounded),
+        ):
+            for status in ("running", "bounded", "paused", "failed", "expired", "retention_review"):
+                for cursor in ("", channel.harvests.first().start_url + "&token=next"):
+                    with self.subTest(mode=mode, status=status, has_cursor=bool(cursor)):
+                        channel.harvests.update(status=status, next_url=cursor)
+                        result = plan(self.now)["rows"][0][mode]
+                        self.assertTrue(result["profile_valid"])
+                        self.assertEqual(result["state"], status)
+                        self.assertFalse(result["scan_complete"])
+
+    def test_cli_complete_with_cursor_stays_metadata_only_and_does_not_change_state(self):
+        channels = (self.channel, self.head, self.bounded)
+        for channel in channels:
+            harvest = channel.harvests.first()
+            channel.harvests.update(status="complete", next_url=harvest.start_url + "&token=next")
+        before = (list(DataChannel.objects.values()), list(DataHarvest.objects.values()))
+        output = io.StringIO()
+        with (
+            patch("ingestion.stac_refresh.timezone.now", return_value=self.now),
+            patch("ingestion.transport.Client.get", side_effect=AssertionError("No HTTP")),
+            CaptureQueriesContext(connection) as queries,
+        ):
+            call_command("stac_refresh_plan", stdout=output)
+        row = json.loads(output.getvalue())["rows"][0]
+        for mode in ("history", "recent", "bounded"):
+            self.assertEqual(row[mode]["state"], "complete")
+            self.assertFalse(row[mode]["scan_complete"])
+        self.assertFalse(row["full_current_30_day_coverage_verified"])
+        self.assertIsNone(row["missing_scene_count"])
+        self.assertNotIn("next_url", output.getvalue())
+        self.assertFalse(any('"payload"' in query["sql"] for query in queries))
+        self.assertEqual(
+            before, (list(DataChannel.objects.values()), list(DataHarvest.objects.values()))
+        )
+
     @override_settings(DATA_STORAGE_MAX_BYTES=RESERVE_BYTES + WINDOW_BYTES * 30)
     def test_current_free_space_is_not_safe_when_sample_growth_is_added(self):
         self.assertFalse(plan(self.now)["budget"]["fits_existing_collection_scenario"])

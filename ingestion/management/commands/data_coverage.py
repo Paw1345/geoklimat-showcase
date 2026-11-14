@@ -8,7 +8,7 @@ from ingestion.models import DataChannel
 
 
 class Command(BaseCommand):
-    help = "Read-only PIG scan coverage; optional local payload verification, no HTTP or writes."
+    help = "Read-only PIG/BDL scan coverage; optional local verification, no HTTP or writes."
 
     def add_arguments(self, parser):
         parser.add_argument("--source")

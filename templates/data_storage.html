@@ -1,4 +1,4 @@
-{% extends "registry_base.html" %}{% block content %}
+{% extends "registry_base.html" %}{% block title %}Pojemność i retencja cache — GeoKlimat{% endblock %}{% block content %}
 <h1>Pojemność i retencja cache danych</h1>
 <p>Stan: {{ report.as_of }} · <a href="?format=json">Eksport JSON</a></p>
 <p>Limit logiczny: {{ report.quota_bytes|filesizeformat }} ({{ report.quota_bytes }} bajtów).
@@ -15,7 +15,7 @@ Nie usuwa danych i nie resetuje kursorów. Wygasłe bajty nie są już odzyskany
 nie datami pomiarów ani potwierdzeniem kompletnej historii 30 dni. Wygasanie obejmuje termin kopii,
 twardy limit od pobrania i termin zadania plikowego. Nie sprawdzamy dat poszczególnych obserwacji w mieszanych stronach,
 jednostek, kompletności, SHA256 ani możliwości eksportu całego pliku.</p>
-<div class="scroll"><table><thead><tr><th>Kanał</th><th>Kopie / fragmenty</th><th>Treści / deklaracja</th><th>Wygasłe treści</th><th>Błędy rozmiaru</th><th>Niewygasłe kopie: pobranie od–do</th></tr></thead><tbody>
+<div class="scroll" role="region" aria-label="Pojemność kopii, tabela przewijana poziomo" tabindex="0"><table><thead><tr><th scope="col">Kanał</th><th scope="col">Kopie / fragmenty</th><th scope="col">Treści / deklaracja</th><th scope="col">Wygasłe treści</th><th scope="col">Błędy rozmiaru</th><th scope="col">Niewygasłe kopie: pobranie od–do</th></tr></thead><tbody>
 {% for row in report.channels %}<tr><td><a href="{% url 'data_detail' row.id %}">{{ row.name }}</a></td><td>{{ row.copies }} / {{ row.chunk_copies }}</td><td>{{ row.actual_bytes|filesizeformat }} / {{ row.declared_bytes|filesizeformat }}</td><td>{{ row.expired_bytes|filesizeformat }}</td><td>{{ row.size_mismatches }}</td><td>{{ row.oldest_copy|default:"Brak" }} — {{ row.newest_copy|default:"Brak" }}</td></tr>{% empty %}<tr><td colspan="6">Brak kanałów danych.</td></tr>{% endfor %}
 </tbody></table></div>
 {% endblock %}

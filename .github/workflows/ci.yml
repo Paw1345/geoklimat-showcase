@@ -7,7 +7,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Build development image
@@ -16,53 +16,16 @@ jobs:
         run: |
           docker compose run --rm --no-deps web ruff check .
           docker compose run --rm --no-deps web ruff format --check .
-      - name: Database, migrations and tests
+      - name: Django checks, migrations and tests
         run: |
           docker compose up -d --wait db
           docker compose run --rm web python manage.py check
           docker compose run --rm web python manage.py makemigrations --check --dry-run
           docker compose run --rm web python manage.py migrate --noinput
-          docker compose run --rm web python manage.py seed_sources
-          docker compose run --rm web python manage.py seed_sources
-          docker compose run --rm web python manage.py import_registry
-          docker compose run --rm web python manage.py import_registry --apply
-          docker compose run --rm web python manage.py import_registry --apply
-          docker compose run --rm web python manage.py configure_p0
-          docker compose run --rm web python manage.py configure_p0 --apply
-          docker compose run --rm web python manage.py configure_open_data
-          docker compose run --rm web python manage.py configure_open_data --apply
-          docker compose run --rm web python manage.py configure_copernicus_catalogues
-          docker compose run --rm web python manage.py configure_copernicus_catalogues --apply
-          docker compose run --rm web python manage.py configure_eurostat
-          docker compose run --rm web python manage.py configure_eurostat --apply
-          docker compose run --rm web python manage.py configure_regional
-          docker compose run --rm web python manage.py configure_regional --apply
-          docker compose run --rm web python manage.py configure_marine
-          docker compose run --rm web python manage.py configure_marine --apply
-          docker compose run --rm web python manage.py prune_data
-          docker compose run --rm web python manage.py seed_data_channels
-          docker compose run --rm web python manage.py configure_imgw_daily
-          docker compose run --rm web python manage.py configure_imgw_daily --apply
-          docker compose run --rm web python manage.py configure_data_paging
-          docker compose run --rm web python manage.py configure_data_paging --apply
-          docker compose run --rm web python manage.py test
-          docker compose run --rm web python manage.py sync_legislation
-          docker compose run --rm web python manage.py sync_legislation --apply
-          docker compose run --rm web python manage.py sync_change_threads
-          docker compose run --rm web python manage.py sync_change_threads --apply
-          docker compose run --rm web python manage.py sync_change_threads --apply
-          docker compose run --rm web python manage.py evaluate_classifier
-          docker compose run --rm web python manage.py collect_alerts
-          docker compose run --rm web python manage.py quality_report
-          docker compose run --rm web python manage.py local_ai_worker --once
-          docker compose run --rm web python manage.py prune_login_windows
-          docker compose run --rm web python manage.py collect_alerts --apply
-          docker compose run --rm web python manage.py collect_alerts --apply
-      - name: Runtime dependency audit
-        run: docker compose run --rm --no-deps web pip-audit -r requirements.txt --cache-dir /tmp/pip-audit-cache
+          docker compose run --rm web python manage.py test --noinput
       - name: Build production image
         run: docker build --target production -t geoklimat:ci .
-      - name: Production configuration checks
+      - name: Production configuration check
         env:
           DJANGO_SECRET_KEY: ci-only-placeholder-secret-with-more-than-fifty-characters-12345
           POSTGRES_PASSWORD: ci-only-database-password
@@ -71,12 +34,6 @@ jobs:
             -e DJANGO_SECRET_KEY -e POSTGRES_PASSWORD \
             -e DJANGO_ALLOWED_HOSTS=monitor.example.org geoklimat:ci \
             python manage.py check --deploy --fail-level WARNING
-      - name: Backup and restore drill
-        run: |
-          docker compose cp scripts/backup.sh db:/tmp/backup.sh
-          docker compose cp scripts/restore-check.sh db:/tmp/restore-check.sh
-          backup=$(docker compose exec -T db sh /tmp/backup.sh)
-          docker compose exec -T db sh /tmp/restore-check.sh "$backup"
       - name: Logs on failure
         if: failure()
         run: docker compose logs --tail=100

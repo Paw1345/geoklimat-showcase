@@ -73,6 +73,51 @@ class FileExportTests(TestCase):
         job.config_hash = "changed"
         self.assertTrue(export_descriptor(self.channel, job)["filename"].endswith(".bin"))
 
+    def test_export_refuses_invalid_chunks_before_sending_a_success_response(self):
+        job, body = self.complete()
+        self.client.force_login(self.staff)
+        part = job.chunks.get()
+        original = {
+            "payload": body,
+            "size_bytes": len(body),
+            "sha256": hashlib.sha256(body).hexdigest(),
+            "summary": part.summary,
+            "expires_at": part.expires_at,
+        }
+        changes = [
+            {"payload": b"x" * len(body)},
+            {"size_bytes": len(body) - 1},
+            {"sha256": "0" * 64},
+            {"summary": {**part.summary, "offset": 1}},
+            {"expires_at": timezone.now() - timedelta(seconds=1)},
+        ]
+        for change in changes:
+            with self.subTest(change=list(change)):
+                job.chunks.filter(pk=part.pk).update(**{**original, **change})
+                response = self.client.get(f"/data/files/{job.pk}/download/")
+                self.assertEqual(response.status_code, 404)
+                self.assertNotIn("ETag", response)
+
+    def test_export_refuses_missing_chunks_and_wrong_whole_file_hash(self):
+        job, body = self.complete()
+        self.client.force_login(self.staff)
+        DownloadJob.objects.filter(pk=job.pk).update(sha256="0" * 64)
+        response = self.client.get(f"/data/files/{job.pk}/download/")
+        self.assertEqual(response.status_code, 404)
+        DownloadJob.objects.filter(pk=job.pk).update(sha256=hashlib.sha256(body).hexdigest())
+        job.chunks.all().delete()
+        response = self.client.get(f"/data/files/{job.pk}/download/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_response_keeps_verified_bytes_when_stored_chunk_changes_after_get(self):
+        job, body = self.complete()
+        self.client.force_login(self.staff)
+        response = self.client.get(f"/data/files/{job.pk}/download/")
+        self.assertEqual(response.status_code, 200)
+        job.chunks.update(payload=b"x" * len(body))
+        self.assertEqual(b"".join(response.streaming_content), body)
+        self.assertEqual(response["ETag"], '"' + hashlib.sha256(body).hexdigest() + '"')
+
     def test_historical_page_has_no_false_observation_claim_or_remote_fetch(self):
         with patch("ingestion.transport.Client.get", side_effect=AssertionError("Remote HTTP")):
             response = self.client.get(f"/data/{self.channel.pk}/")

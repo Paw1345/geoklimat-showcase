@@ -1,4 +1,4 @@
-{% extends "registry_base.html" %}{% block content %}
+{% extends "registry_base.html" %}{% block title %}Arkusz {{ name }} — GeoKlimat{% endblock %}{% block content %}
 <h1>{{ name }}</h1><p>Oryginalne wartości z {{ release.filename }}. SHA-256: {{ release.sha256 }}.</p>
-<form method="get"><select name="sheet">{% for sheet in names %}<option {% if name == sheet %}selected{% endif %}>{{ sheet }}</option>{% endfor %}</select><button>Pokaż arkusz</button></form>
-<div class="scroll"><table>{% for row in rows %}<tr>{% for value in row %}<td>{{ value|default_if_none:"" }}</td>{% endfor %}</tr>{% endfor %}</table></div>{% endblock %}
+<form method="get"><label for="sheet">Arkusz</label> <select name="sheet" id="sheet">{% for sheet in names %}<option {% if name == sheet %}selected{% endif %}>{{ sheet }}</option>{% endfor %}</select><button type="submit">Pokaż arkusz</button></form>
+<div class="scroll" role="region" aria-label="Arkusz źródłowy, tabela przewijana poziomo" tabindex="0"><table>{% for row in rows %}<tr>{% for value in row %}<td>{{ value|default_if_none:"" }}</td>{% endfor %}</tr>{% endfor %}</table></div>{% endblock %}

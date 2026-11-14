@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 from django.core.management import call_command
 from django.test import SimpleTestCase, override_settings
 
-from ingestion.funding_search import DETAIL, discover
+from ingestion.funding_search import DETAIL, PORTAL, discover
 from ingestion.funding_search_transport import request_spec
 from ingestion.transport import Client, FetchError, Response
 
@@ -130,6 +130,49 @@ class FundingSearchQualityTests(SimpleTestCase):
         with self.assertRaises(FetchError):
             self.report([self.row(), self.row()])
 
+    def test_life_portal_competitive_url_preserved_only_for_type_eight(self):
+        row = self.row("2025-CET-EUCF")
+        row["metadata"]["type"] = ["8"]
+        row["url"] = PORTAL + "competitive-calls-cs/48256791"
+        row["metadata"]["url"] = [row["url"]]
+        row["reference"] = "16821COMPETITIVE_CALLen"
+        report = self.report([row])
+        self.assertEqual(report["records"][0]["source_url"], row["url"])
+        self.assertEqual(report["records"][0]["identifier"], "LIFE-2025-CET-EUCF")
+        self.assertFalse(report["current_call_verified"])
+        for kind in ("1", "2"):
+            row["metadata"]["type"] = [kind]
+            with self.subTest(kind=kind), self.assertRaises(FetchError):
+                self.report([row])
+
+    def test_life_portal_competitive_url_variants_fail_closed(self):
+        canonical = PORTAL + "competitive-calls-cs/48256791"
+        for url in (
+            canonical + "?redirect=1",
+            canonical + "#fragment",
+            canonical + "/extra",
+            canonical.replace("https:", "http:"),
+            canonical.replace("ec.europa.eu", "ec.europa.eu.example.org"),
+            PORTAL + "competitive-calls-cs/not-numeric",
+            PORTAL + "competitive-calls-cs/1234567890123",
+        ):
+            row = self.row()
+            row["metadata"]["type"] = ["8"]
+            row["url"] = url
+            row["metadata"]["url"] = [url]
+            with self.subTest(url=url), self.assertRaises(FetchError):
+                self.report([row])
+
+    def test_life_portal_competitive_calls_keep_strict_identifier_uniqueness(self):
+        rows = [self.row(), self.row()]
+        for index, row in enumerate(rows):
+            row["metadata"]["type"] = ["8"]
+            row["url"] = PORTAL + "competitive-calls-cs/" + str(48256791 + index)
+            row["metadata"]["url"] = [row["url"]]
+            row["reference"] = str(16821 + index) + "COMPETITIVE_CALLen"
+        with self.assertRaises(FetchError):
+            self.report(rows)
+
     def test_page_budget_warnings_and_incomplete_results_fail_closed(self):
         for response in [
             self.response([], 251),
@@ -148,9 +191,10 @@ class FundingSearchQualityTests(SimpleTestCase):
         client.funding_search.side_effect = [
             self.response(rows[:50], 51),
             self.response(rows[50:], 51, 2),
-        ]
+        ] * 2
         report = discover(client, self.now)
-        self.assertEqual((report["total"], report["pages"]), (51, 2))
+        # Multi-page results need a second identical pass to count as converged.
+        self.assertEqual((report["total"], report["pages"], report["passes"]), (51, 4, 2))
         for second in [self.response(rows[:1], 51, 2), self.response(rows[50:], 52, 2)]:
             client.funding_search.side_effect = [self.response(rows[:50], 51), second]
             with self.assertRaises(FetchError):

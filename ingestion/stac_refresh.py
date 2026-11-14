@@ -46,7 +46,7 @@ def channel_state(channel, now, validate=None):
                 search_start=scope["search_start"],
                 search_end=scope["search_end"],
                 search_end_lag_seconds=int((now - scope["search_end"]).total_seconds()),
-                scan_complete=harvest.status == "complete",
+                scan_complete=harvest.status == "complete" and not harvest.next_url,
             )
     except (FetchError, TypeError, AttributeError, ValueError):
         result.update(state="profile_or_scope_unavailable", profile_valid=False)

@@ -1,9 +1,11 @@
-"""Local planar polygon/bbox predicates; never repair or transform provider geometry."""
+"""Local planar polygon/point bbox predicates; never repair or transform provider geometry."""
 
-from ingestion.pig_data import validate_geometry
+from ingestion.pig_data import validate_geometry, validate_point
 from ingestion.transport import FetchError
 
-METHODS = {"envelope", "geometry"}
+METHODS = {"envelope", "geometry", "geometry_pl", "geometry_eu"}
+# Exact bbox intersection plus the shared administrative mask (ingestion.boundary_mask).
+MASKED_METHODS = {"geometry_pl": "PL", "geometry_eu": "EU"}
 MAX_QUERY_POSITIONS = 1_000_000
 
 
@@ -25,10 +27,17 @@ class GeometryFilter:
         from shapely.errors import GEOSException
         from shapely.geometry import shape
 
-        validate_geometry(geometry)
-        polygons = (
-            [geometry["coordinates"]] if geometry["type"] == "Polygon" else geometry["coordinates"]
-        )
+        if isinstance(geometry, dict) and geometry.get("type") == "Point":
+            # Point layers are validated per channel profile before reaching the filter.
+            validate_point(geometry)
+            polygons = [[[geometry["coordinates"]]]]
+        else:
+            validate_geometry(geometry)
+            polygons = (
+                [geometry["coordinates"]]
+                if geometry["type"] == "Polygon"
+                else geometry["coordinates"]
+            )
         for polygon in polygons:
             for ring in polygon:
                 self.positions += len(ring)

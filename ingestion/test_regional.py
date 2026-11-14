@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 from unittest.mock import Mock
 
 from django.core.management import call_command
@@ -247,6 +248,42 @@ class RegionalTests(TestCase):
             call_command("configure_regional", apply=True, stdout=io.StringIO())
         source.refresh_from_db()
         self.assertEqual(source.url, "https://example.org/admin")
+
+    def test_dolnoslaskie_nature_section_fixture_uses_base_and_day_first_dates(self):
+        html = (Path(__file__).parent / "fixtures" / "regional_125_2026-10-07.html").read_text(
+            encoding="utf-8"
+        )
+        entries, rejected = self.parse(125, html)
+        self.assertEqual((len(entries), rejected), (3, 0))
+        self.assertEqual(
+            entries[0].url,
+            "https://umwd.dolnyslask.pl/zasobyprzyrody/aktualnosci/artykul/"
+            "zapraszamy-do-udzialu-w-ii-miedzynarodowym-kongresie-pszczelarskim-w-kudowie-zdroj/",
+        )
+        self.assertEqual(
+            entries[0].title,
+            "Zapraszamy do udziału w II Międzynarodowym Kongresie Pszczelarskim w Kudowie Zdroju",
+        )
+        self.assertTrue(entries[0].summary.startswith("Urząd Marszałkowski"))
+        self.assertEqual([e.published for e in entries], ["2026-10-06", "2026-02-27", "2026-02-23"])
+        # The truncated heading text must not replace the full title attribute.
+        self.assertFalse(entries[2].title.endswith("..."))
+        rows = html[html.index('<div class="aktualnosci-list">') : html.index("pagination")]
+        for index, changed in enumerate(
+            (
+                html.replace("</body>", rows + "</body>"),
+                html.replace('<base href="https://umwd.dolnyslask.pl/" />', ""),
+                html.replace("06-10-2026", "10/06/2026"),
+                html.replace("06-10-2026", "31-02-2026"),
+                html.replace("zasobyprzyrody/aktualnosci/artykul/zapr", "sport/artykul/zapr"),
+                html.replace('href="zasobyprzyrody/', 'href="https://outside.example/zasoby/'),
+                html.replace("aktualnosci-list", "changed-list"),
+            )
+        ):
+            with self.subTest(index=index), self.assertRaises(FetchError):
+                self.parse(125, changed)
+        with self.assertRaises(FetchError):
+            self.parse(125, html, "https://umwd.dolnyslask.pl/")
 
     def test_pomorskie_relative_age_is_not_invented_date(self):
         html = (

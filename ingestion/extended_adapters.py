@@ -118,6 +118,14 @@ def parse_extended(source, response):
         from ingestion.pig_services import parse_capabilities
 
         return parse_capabilities(source, response)
+    if source.adapter == "ogc" and source.config.get("mode") == "gugik_wfs":
+        from ingestion.gugik_wfs import parse_capabilities
+
+        return parse_capabilities(source, response)
+    if source.adapter == "ogc" and source.config.get("mode") == "copernicus_wms":
+        from ingestion.copernicus_wms import parse_capabilities
+
+        return parse_capabilities(source, response)
     if source.adapter == "web" and source.config.get("listing") == "gdos_services":
         from ingestion.gdos_services import parse_directory
 

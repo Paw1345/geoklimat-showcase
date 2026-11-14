@@ -1,0 +1,51 @@
+{% extends "registry_base.html" %}
+{% block title %}CRFOP — wyszukiwanie · GeoKlimat{% endblock %}
+{% block content %}
+<h1>CRFOP — wyszukiwanie form ochrony przyrody</h1>
+<p>{{ channel.name }}</p>
+<p><a href="{% url 'data_detail' channel.pk %}">Szczegół kanału i kopie</a> · <a href="{% url 'registry_detail' channel.registry.registry_id %}">Rejestr źródła</a> · <a href="{{ channel.url }}">Katalog dostawcy</a></p>
+<p>Rejestr atrybutowy bez geometrii. Historyczny stan nie jest datą pobrania ani potwierdzeniem obecnego statusu prawnego. Flagi t/f zachowujemy bez interpretacji; powierzchnia: jednostka niepotwierdzona, nie zakładamy hektarów.</p>
+<form method="get" class="crfop-form">
+  {{ form.non_field_errors }}
+  {% for field in form.visible_fields %}<p>{{ field.label_tag }}<br>{{ field }} {{ field.errors }}</p>{% endfor %}
+  {{ form.snapshot }}
+  {% if form.page.errors %}<p role="alert">{{ form.page.errors }}</p>{% endif %}
+  {% if form.snapshot.errors %}<p role="alert">{{ form.snapshot.errors }}</p>{% endif %}
+  <p>Oba filtry muszą pasować. Wielkość liter nie ma znaczenia. Zmiana filtrów wraca do strony 1 tej samej kopii.</p>
+  <button type="submit">Filtruj</button> <a href="{{ request.path }}">Wybierz najnowszą kopię i wyczyść filtry</a>
+</form>
+{% if error %}<p role="alert">{{ error }}</p>
+{% elif copy %}
+<section aria-labelledby="copy-heading">
+  <h2 id="copy-heading">Wybrana kopia #{{ copy.snapshot.pk }}</h2>
+  <p>{{ channel.attribution }}</p>
+  <p>Stan rejestru: {{ copy.data.as_of }}. Licencja: {{ copy.data.license }}. Część {{ copy.data.part }} z {{ copy.data.parts }}. Formy w tej części: {{ copy.summary.records }}; w źródłowym rejestrze: {{ copy.data.forms_total_in_register }}.</p>
+  {% if copy.summary.partial %}<p role="status"><strong>Nie wyszukuje pozostałych części.</strong> Trzy części użytków ekologicznych są osobnymi kopiami; wynik nie jest kompletnym wynikiem krajowym.</p>{% endif %}
+  <p>Nie jest to pełny CRFOP. Pobrano {{ copy.snapshot.fetched_at }}; ważna do {{ copy.expires_at }}. Retencja 30 dni od pobrania, nie od daty stanu rejestru. Kolejne strony korzystają z tej samej kopii.</p>
+  <p>Dopasowania: {{ page.paginator.count }}. Strona {{ page.number }} z {{ page.paginator.num_pages }} (do 50 form).</p>
+  <p>SHA JSON: <code class="checksum">{{ copy.snapshot.sha256 }}</code><br>SHA źródłowego XLSX: <code class="checksum">{{ copy.data.sha256 }}</code></p>
+  <p><a href="{% url 'data_download' copy.snapshot.pk %}">Pobierz całą kopię JSON</a> — nie tylko filtrowane wyniki. <a href="{{ links.current }}">Link do tego wyboru kopii i filtrów</a></p>
+</section>
+{% if page.paginator.count %}
+<div class="scroll" role="region" aria-label="Tabela CRFOP, przewijana poziomo" tabindex="0">
+<table>
+  <caption>Formy ochrony przyrody — strona {{ page.number }}. Puste wartości oznaczają brak danych, nie zero.</caption>
+  <thead><tr><th scope="col">fop_id</th><th scope="col">Nazwa i akty prawne</th><th scope="col">inspire_id</th><th scope="col">Data utworzenia</th><th scope="col">archiwalny (flaga źródłowa)</th><th scope="col">Powierzchnia (jednostka niepotwierdzona)</th></tr></thead>
+  <tbody>{% for row in page %}<tr>
+    <td>{{ row.id }}</td><td>{{ row.name|default:"brak nazwy w źródle" }}
+      <details><summary>Akty prawne: {{ row.acts_count }} (podgląd do 10)</summary>
+        <p>Podgląd do 500 znaków na wartość; pełny oryginalny tekst w eksporcie JSON.</p>
+        <ol>{% for act in row.acts %}<li><dl>{% for label,value in act %}<dt>{{ label }}</dt><dd>{{ value|default:"brak danych"|truncatechars:500 }}</dd>{% endfor %}</dl></li>{% empty %}<li>Brak aktów w kopii.</li>{% endfor %}</ol>
+        {% if row.omitted_acts %}<p>Pominięte w podglądzie: {{ row.omitted_acts }}. Pełna lista w eksporcie JSON.</p>{% endif %}
+      </details>
+    </td><td>{{ row.inspire_id }}</td><td>{{ row.created|default:"brak danych" }}</td><td>{{ row.archived|default:"brak danych" }}</td><td>{{ row.area|default:"brak danych" }}</td>
+  </tr>{% endfor %}</tbody>
+</table>
+</div>
+{% else %}<p role="status">Brak dopasowań do wybranych filtrów w tej kopii.</p>{% endif %}
+<nav aria-label="Strony wyników CRFOP">
+  {% if links.previous %}<a href="{{ links.previous }}" rel="prev">Poprzednia strona</a>{% endif %}
+  {% if links.next %}<a href="{{ links.next }}" rel="next">Następna strona</a>{% endif %}
+</nav>
+{% elif not form.errors %}<p role="status">Brak aktualnej kopii. Nie oznacza to pustego rejestru u dostawcy.</p>{% endif %}
+{% endblock %}

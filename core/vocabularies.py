@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
 
-from ingestion.inspire_codes import CONFIG, SCHEMES, SLUG, URL
+from ingestion.inspire_codes import ALL_SCHEMES, PROFILES, SLUG, URL
 from ingestion.models import Item, Source
 
 
@@ -17,7 +17,7 @@ class VocabularyForm(forms.Form):
     scheme = forms.ChoiceField(
         label="Słownik",
         required=False,
-        choices=[("", "Wszystkie osiem słowników"), *SCHEMES.items()],
+        choices=[("", "Wszystkie słowniki"), *ALL_SCHEMES.items()],
     )
     q = forms.CharField(label="Nazwa PL lub EN", required=False, max_length=100)
     format = forms.ChoiceField(
@@ -35,14 +35,18 @@ def catalog(request):
     if request.GET and not form.is_valid():
         return render(request, "vocabularies.html", {"form": form}, status=400)
     filters = form.cleaned_data if request.GET else {}
-    source = Source.objects.filter(
-        slug=SLUG,
-        adapter="json",
-        url=URL,
-        config=CONFIG,
-        activation_approved=True,
-    ).first()
-    items = Item.objects.filter(source=source, metadata__inspire_code_value=True).order_by("url")
+    sources = [
+        source
+        for source in Source.objects.filter(
+            slug__in=list(PROFILES), adapter="json", url=URL, activation_approved=True
+        )
+        if source.config == PROFILES[source.slug][0]
+    ]
+    # The original eight-scheme channel stays the reference for the import date.
+    source = next((s for s in sources if s.slug == SLUG), None)
+    items = Item.objects.filter(source__in=sources, metadata__inspire_code_value=True).order_by(
+        "url"
+    )
     if filters.get("scheme"):
         items = items.filter(metadata__scheme_uri=filters["scheme"])
     if filters.get("q"):
@@ -82,7 +86,7 @@ def catalog(request):
             {
                 "records": records,
                 "count": len(records),
-                "selected_schemes": list(SCHEMES),
+                "selected_schemes": list(ALL_SCHEMES),
                 "filters": {"scheme": filters.get("scheme", ""), "q": filters.get("q", "")},
                 "as_of": timezone.now().isoformat(),
                 "source_url": URL,
@@ -106,6 +110,7 @@ def catalog(request):
         {
             "form": form,
             "source": source,
+            "sources": sources,
             "items": Paginator(items.defer("summary"), 50).get_page(request.GET.get("page")),
             "filters": filters,
         },

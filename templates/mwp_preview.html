@@ -1,0 +1,19 @@
+<section aria-labelledby="mwp-preview-heading">
+<h2 id="mwp-preview-heading">Zdekodowany podgląd MWP</h2>
+{% if mwp_preview %}
+<p>Pierwsze trzy wiersze według OBJECTID (nie losowa próbka), do 12 tys. znaków.
+Teksty słowników odkodowane bez zmiany wartości. Null oznacza brak wartości,
+nie zero. Jednostki pomiarów są w polu units; w chemii jednostka jest w JEDNOSTKA,
+a kwalifikator (np. LOQ) w ZNAK. Pusta jednostka nie oznacza wielkości bezwymiarowej.
+Bez oceny przekroczeń lub konwersji jednostek.</p>
+<p>Kopia #{{ mwp_preview.snapshot.pk }}. SHA-256: <code class="checksum">{{ mwp_preview.snapshot.sha256 }}</code>.
+Eksport poniżej obejmuje całą kopię JSON, nie podgląd.</p>
+<pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ mwp_preview.text }}</pre>
+{% elif mwp_error %}
+<p><strong>Podgląd MWP niedostępny.</strong> Nie można potwierdzić zgody, profilu,
+integralności, schematu lub limitu kopii. Wymagany przegląd operatora; nie pobieramy
+danych automatycznie i nie pokazujemy surowych indeksów słowników.</p>
+{% else %}
+<p>Brak dostępnej kopii MWP w lokalnej retencji. Nie oznacza to pustej tabeli u dostawcy.</p>
+{% endif %}
+</section>

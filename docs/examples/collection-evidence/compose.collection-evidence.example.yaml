@@ -1,0 +1,7 @@
+# Pass explicitly AFTER compose.yaml, from the repository root.
+# Never rename to compose.override.yaml. Preparation alone must stay OFF.
+services:
+  worker:
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.collection_evidence_local
+      GEOKLIMAT_COLLECTION_EVIDENCE_OPT_IN: "${GEOKLIMAT_COLLECTION_EVIDENCE_OPT_IN:-off}"

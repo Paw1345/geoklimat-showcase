@@ -1,0 +1,14 @@
+{% extends "registry_base.html" %}
+{% block title %}Luki pobierania — GeoKlimat{% endblock %}
+{% block content %}<h1>Luki pobierania</h1>
+<p>Stan {{ report.generated_at }}. <a href="?format=json">Wersja JSON</a>. Odczyt nie uruchamia pobierania. Pozycja jest spóźniona, gdy od ostatniego sukcesu minęło więcej niż {{ report.late_intervals }} interwały. Najdłuższa przerwa dotyczy ostatnich {{ report.window_days }} dni.</p>
+<p>Spóźnione źródła: {{ report.sources_late }} z {{ report.sources|length }}. Spóźnione kanały danych: {{ report.channels_late }} z {{ report.channels|length }}.</p>
+<h2>Źródła informacji</h2>
+<table><thead><tr><th scope="col">Źródło</th><th scope="col">Interwał (min)</th><th scope="col">Ostatni sukces</th><th scope="col">Minut od sukcesu</th><th scope="col">Najdłuższa przerwa (min)</th><th scope="col">Błędy z rzędu</th><th scope="col">Stan</th></tr></thead>
+<tbody>{% for row in report.sources %}<tr><td>{{ row.organization }} — {{ row.name }}</td><td>{{ row.interval_minutes }}</td><td>{{ row.last_success_at|default:"brak" }}</td><td>{{ row.minutes_since_success|default_if_none:"—" }}</td><td>{{ row.longest_gap_minutes }}</td><td>{{ row.failures }}</td><td>{% if row.late %}<strong>spóźnione</strong>{% else %}w normie{% endif %}</td></tr>{% empty %}<tr><td colspan="7">Brak włączonych źródeł.</td></tr>{% endfor %}</tbody></table>
+<h2>Kanały danych</h2>
+<p>Kanał danych zapisuje czas ostatniej próby, nie ostatniego sukcesu, dlatego obok jest jej wynik.</p>
+<table><thead><tr><th scope="col">Kanał</th><th scope="col">Interwał (min)</th><th scope="col">Ostatnia próba</th><th scope="col">Minut od próby</th><th scope="col">Wynik</th><th scope="col">Stan</th></tr></thead>
+<tbody>{% for row in report.channels %}<tr><td><a href="{% url 'data_detail' row.id %}">{{ row.name }}</a></td><td>{{ row.interval_minutes }}</td><td>{{ row.checked_at|default:"brak" }}</td><td>{{ row.minutes_since_check|default_if_none:"—" }}</td><td>{{ row.last_status }}</td><td>{% if row.late %}<strong>spóźniony</strong>{% else %}w normie{% endif %}</td></tr>{% empty %}<tr><td colspan="6">Brak włączonych kanałów.</td></tr>{% endfor %}</tbody></table>
+<p>Gdy cały worker stoi, spóźnia się wszystko naraz. O takim przestoju powiadamia zewnętrzny ping, jeśli ustawiono <code>WORKER_HEARTBEAT_URL</code>.</p>
+{% endblock %}

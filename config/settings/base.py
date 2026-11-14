@@ -62,12 +62,18 @@ DATABASES = {
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
         "CONN_MAX_AGE": 60,
         "CONN_HEALTH_CHECKS": True,
-        "OPTIONS": {"connect_timeout": 5},
+        # S9 load test 2026-10-15: JIT compilation cost ~0.6-0.8 s per home page count
+        # on 30k items (execution ~0.05 s). Short OLTP queries never win it back.
+        "OPTIONS": {"connect_timeout": 5, "options": "-c jit=off"},
     }
 }
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        # Staff and editors only; createsuperuser is interactive. Existing passwords stay valid.
+        "OPTIONS": {"min_length": 12},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -86,6 +92,20 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+# C2-C6: test overrides only. Live schema/opt-in require the separate C7/C8 gates.
+COLLECTION_EVIDENCE_ENABLED = False
+# Daily alert digest by e-mail. Off by default; SMTP values come only from the environment.
+ALERT_EMAIL_ENABLED = os.environ.get("ALERT_EMAIL_ENABLED") == "1"
+SITE_URL = os.environ.get("SITE_URL", "")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
+EMAIL_TIMEOUT = 20
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "geoklimat@localhost")
+# Optional https address pinged after each healthy worker cycle; empty disables it.
+WORKER_HEARTBEAT_URL = os.environ.get("WORKER_HEARTBEAT_URL", "")
 INGEST_USER_AGENT = os.environ.get("INGEST_USER_AGENT", "GeoKlimatMonitor/0.2 (metadata)")
 INGEST_ALLOWED_HOSTS = [
     "www.gov.pl",

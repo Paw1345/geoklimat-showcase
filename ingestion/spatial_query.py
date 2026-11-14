@@ -8,9 +8,10 @@ from django.conf import settings
 from django.db import connection, transaction
 from django.utils import timezone
 
+from ingestion.boundary_mask import MaskError, load_mask
 from ingestion.data_coverage import MODES, coverage_report
 from ingestion.models import DataChannel
-from ingestion.spatial_geometry import METHODS, GeometryError, GeometryFilter
+from ingestion.spatial_geometry import MASKED_METHODS, METHODS, GeometryError, GeometryFilter
 from ingestion.transport import FetchError
 
 RESULT_BYTES = 5 * 1024 * 1024
@@ -30,6 +31,9 @@ def valid_bbox(value):
 
 
 def envelope(geometry):
+    if geometry["type"] == "Point":
+        x, y = geometry["coordinates"]
+        return (x, y, x, y)
     polygons = (
         [geometry["coordinates"]] if geometry["type"] == "Polygon" else geometry["coordinates"]
     )
@@ -59,7 +63,10 @@ def query(
     bbox = valid_bbox(bbox)
     if not isinstance(method, str) or method not in METHODS:
         raise FetchError("Invalid spatial intersection method")
-    geometry_filter = GeometryFilter(bbox) if method == "geometry" else None
+    geometry_filter = GeometryFilter(bbox) if method != "envelope" else None
+    mask = load_mask(MASKED_METHODS[method]) if method in MASKED_METHODS else None
+    # The token pins the exact mask file, so a reinstalled mask starts a new review.
+    pinned_method = f"{method}@{mask.sha256}" if mask else method
     if type(limit) is not int or not 1 <= limit <= 500:
         raise FetchError("Spatial result limit invalid")
     if (
@@ -89,8 +96,15 @@ def query(
         from ingestion.pig_paging import validate_profile
         from ingestion.spatial_batches import prepare, read_token
 
-        validate_profile(channel)
-        pinned = read_token(copy_token, channel, bbox, limit, now, method=method)
+        bdl = channel.config.get("mode") == "bdl_features_scan"
+        if bdl:
+            from ingestion.bdl_paging import validate_profile as validate_bdl_profile
+
+            if not validate_bdl_profile(channel)[1]["geometry"]:
+                raise FetchError("BDL attribute scans have no requested geometry")
+        else:
+            validate_profile(channel)
+        pinned = read_token(copy_token, channel, bbox, limit, now, method=pinned_method)
         harvests = channel.harvests.defer("page_fingerprints", "visited_urls")
         harvest = harvests.filter(pk=pinned["harvest"]).first() if pinned else harvests.first()
         if not harvest:
@@ -110,14 +124,16 @@ def query(
                 copy_page,
                 copy_token,
                 pinned,
-                method=method,
+                method=pinned_method,
             )
         matches, features, receipts, encoded_size = 0, [], [], 0
         geometry_error = None
+        missing_geometry_records = 0
+        mask_relations = {"inside": 0, "boundary": 0, "outside": 0}
         offset = (result_page - 1) * limit
 
         def page(data, row):
-            nonlocal matches, encoded_size, geometry_error
+            nonlocal matches, encoded_size, geometry_error, missing_geometry_records
             receipts.append(
                 {
                     "snapshot_id": row["pk"],
@@ -128,13 +144,20 @@ def query(
                 }
             )
             for feature in data["features"]:
+                if bdl and feature["geometry"] is None:
+                    missing_geometry_records += 1
+                    continue
                 try:
                     matched = (
                         geometry_filter.matches(feature["geometry"])
                         if geometry_filter
                         else overlaps(envelope(feature["geometry"]), bbox)
                     )
-                except GeometryError as exc:
+                    if matched and mask:
+                        relation = mask.relation(feature["geometry"])
+                        mask_relations[relation] += 1
+                        matched = relation != "outside"
+                except (GeometryError, MaskError) as exc:
                     geometry_error = exc
                     raise
                 if matched:
@@ -173,7 +196,9 @@ def query(
                 "bbox": bbox,
                 "crs": "EPSG:4326",
                 "method": (
-                    "planar_geometry_bbox_intersection"
+                    "planar_geometry_bbox_and_mask_intersection"
+                    if mask
+                    else "planar_geometry_bbox_intersection"
                     if geometry_filter
                     else "geometry_envelope_overlap"
                 ),
@@ -182,7 +207,9 @@ def query(
                 "topology_verified_features": geometry_filter.checked if geometry_filter else 0,
                 "geometry_positions_checked": geometry_filter.positions if geometry_filter else 0,
                 "geodesic": False,
-                "administrative_mask_verified": False,
+                "administrative_mask_verified": bool(mask),
+                "administrative_mask": mask.provenance() if mask else None,
+                "mask_relations_in_bbox": mask_relations if mask else None,
                 "clipped": False,
                 "matches_in_available_copies": matches,
                 "matches_scope": "selected_copy_batch" if batching else "all_available_copies",
@@ -197,12 +224,14 @@ def query(
                     "has_previous": bool(batching and result_page > 1),
                     "has_next": bool(batching and result_page < result_pages),
                     "scope": "selected_copy_batch" if batching else "all_available_copies",
-                    "order": "OBJECTID_ascending",
+                    "order": "id_ascending" if bdl else "OBJECTID_ascending",
                 },
                 "returned": len(features),
                 "truncated": matches > len(features),
                 "limit": limit,
-                "full_scope_verified": coverage["scope_verified"],
+                "full_scope_verified": coverage["scope_verified"] and not missing_geometry_records,
+                "full_record_scope_verified": coverage["scope_verified"],
+                "missing_geometry_records": missing_geometry_records,
                 "coverage": coverage,
                 "receipts": receipts,
                 "attribution": channel.attribution,

@@ -6,7 +6,8 @@
   <title>GeoKlimat Monitor</title>
   <style>
     body { margin: 0; background: #f4f6f1; color: #16392f; font-family: system-ui, sans-serif; }
-    main { max-width: 1100px; margin: 48px auto; padding: 24px; }
+    main { max-width: 1100px; margin: 24px auto; padding: 0 24px 24px; }
+    main:focus { outline: none; }
     .label { letter-spacing: .12em; text-transform: uppercase; font-size: .8rem; }
     h1 { font-size: clamp(2.5rem, 7vw, 4.5rem); line-height: 1.05; margin: 24px 0; }
     p { font-size: 1.15rem; line-height: 1.7; max-width: 620px; }
@@ -18,28 +19,34 @@
     small { color: #446458; }
     select, button { padding: 10px; max-width: 100%; font: inherit; margin: 6px 4px 6px 0; }
     button { background: #16392f; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+    .shortcuts { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0; }
+    .shortcuts a { background: white; border: 1px solid #dbe2d8; border-radius: 8px; padding: 12px 18px; font-weight: 600; }
     .table-wrap { overflow-x: auto; }
     table { border-collapse: collapse; width: 100%; background: white; }
     th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dbe2d8; }
   </style>
+  {% include "partials/site_styles.html" %}
 </head>
 <body>
-<main>
+{% include "partials/site_nav.html" %}
+<main id="tresc" tabindex="-1">
   <span class="label">Administracja · GIS · ochrona środowiska</span>
   <h1>GeoKlimat<br>Monitor</h1>
   <p>Jedno miejsce dla zmian dotyczących klimatu, INSPIRE, GIOŚ, GUGiK i Unii Europejskiej.</p>
+  <nav class="shortcuts" aria-label="Najczęstsze widoki">
+    <a href="/">Aktualności</a>
+    <a href="{% url 'legal_catalog' %}">Prawo</a>
+    <a href="/?kind=Konsultacje">Konsultacje</a>
+    <a href="{% url 'legal_deadlines' %}">Terminy</a>
+    <a href="{% url 'search' %}">Szukaj</a>
+    {% if user.is_authenticated %}<a href="{% url 'alert_inbox' %}">Moje alerty</a>{% endif %}
+  </nav>
   <aside>
     <strong>{{ enabled_count }} aktywnych kanałów · {{ item_count }} pobranych rekordów</strong>
     <p>Metadane z oficjalnych źródeł. Klasyfikacja regułowa pomaga wybierać tematy, ale wymaga kontroli redakcyjnej. Akty ELI są dostępne po wybraniu źródła lub filtrów. Wykluczenie nie usuwa publikacji.</p>
     <a href="/admin/">Panel administratora</a>
     · <a href="/registry/">Rejestr źródeł ({{ registry_count }})</a>
     · <a href="/data/">Pomiary i GIS</a>
-    {% if user.is_staff %} · <a href="/collections/">Kolekcje i katalogi</a>{% endif %}
-    · <a href="/search/">Wyszukiwarka</a>
-    · <a href="/legislation/">Procesy i akty</a> · <a href="/deadlines/">Terminy</a>
-    · <a href="/changes/">Wątki zmian</a>
-    · <a href="/changes/?watching=1">Obserwowane</a> · <a href="/alerts/">Alerty</a>
-    {% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button>Wyloguj się</button></form>{% else %} · <a href="{% url 'login' %}?next=/">Zaloguj się</a>{% endif %}
     {% if perms.ingestion.edit_change_threads %} · <a href="{% url 'ai_catalog' %}">Szkice AI</a>{% endif %}
   </aside>
   <h2>Ostatnio pozyskane informacje</h2>
@@ -74,8 +81,8 @@
   <nav aria-label="Strony wyników">{% if items.has_previous %}<a href="?{{ page_query }}&amp;page={{ items.previous_page_number }}">Poprzednia</a>{% endif %} Strona {{ items.number }} / {{ items.paginator.num_pages }} · {{ items.paginator.count }} grup {% if items.has_next %}<a href="?{{ page_query }}&amp;page={{ items.next_page_number }}">Następna</a>{% endif %}</nav>
   <h2>Pokrycie źródeł</h2>
   <p>Wyłączone kanały nie są pobierane przez harmonogram.</p>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Źródło</th><th>Status</th><th>Ostatni sukces</th><th>Zakres</th></tr></thead>
+  <div class="table-wrap" role="region" aria-label="Pokrycie źródeł, tabela przewijana poziomo" tabindex="0"><table>
+    <thead><tr><th scope="col">Źródło</th><th scope="col">Status</th><th scope="col">Ostatni sukces</th><th scope="col">Zakres</th></tr></thead>
     <tbody>{% for source in sources %}<tr>
       <td>{{ source.name }}</td>
       <td>{% if not source.enabled %}Weryfikacja / wyłączone{% elif source.failures %}Błąd — ponawianie{% else %}Aktywne{% endif %}</td>
@@ -83,7 +90,7 @@
       <td>{{ source.scope }}</td>
     </tr>{% endfor %}</tbody>
   </table></div>
-<footer><a href="/information/">Prywatność i ograniczenia</a>{% if user.is_staff %} · <a href="/quality/">Jakość danych</a>{% endif %}</footer>
 </main>
+{% include "partials/site_footer.html" %}
 </body>
 </html>

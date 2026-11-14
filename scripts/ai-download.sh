@@ -9,5 +9,7 @@ until ollama list >/dev/null 2>&1; do
   test "$attempt" -lt 30
   sleep 1
 done
-ollama pull qwen3:4b
+for model in ${AI_MODELS:-qwen3:14b}; do
+  ollama pull "$model"
+done
 ollama list

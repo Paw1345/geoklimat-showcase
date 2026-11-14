@@ -7,7 +7,6 @@ from django.views.decorators.http import require_GET
 
 from core.content_scope import ContentScopeForm, filter_content
 from ingestion.models import Classification, Item, RegistryEntry, Source
-from ingestion.search import document_vector
 from ingestion.taxonomy import MASTER_TOPICS
 
 
@@ -93,10 +92,9 @@ def search_items(data):
     query = data.get("q", "")
     if query:
         terms = SearchQuery(query, config="simple", search_type="websearch")
-        items = (
-            items.annotate(document=document_vector())
-            .filter(document=terms)
-            .annotate(rank=SearchRank(document_vector(), terms))
+        # The stored vector (Item.search_document) is the indexed document_vector().
+        items = items.filter(search_document=terms).annotate(
+            rank=SearchRank(F("search_document"), terms)
         )
     else:
         items = items.annotate(rank=Value(0.0, output_field=FloatField()))

@@ -1,11 +1,10 @@
 import io
 import json
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from unittest import skipUnless
 from unittest.mock import Mock, patch
-from xml.sax.saxutils import escape
-from zipfile import ZIP_DEFLATED, ZipFile
 
+from django.conf import settings
 from django.core.management import call_command
 from django.test import TestCase
 
@@ -16,98 +15,7 @@ from ingestion.service import fetch_entries, run_batch
 from ingestion.transport import FetchError, Response
 from ingestion.workbook_registry import read_registry, xml
 
-
-def _excel_column(number):
-    letters = ""
-    while number:
-        number, remainder = divmod(number - 1, 26)
-        letters = chr(65 + remainder) + letters
-    return letters
-
-
-def _write_synthetic_registry(path):
-    sheets = {
-        "Master Registry": [
-            [
-                "ID",
-                "Organization",
-                "Source / Endpoint",
-                "Country/Area",
-                "Level",
-                "Priority",
-                "Poll interval (min)",
-                "Endpoint URL",
-            ],
-            [9001, "Demo Institute", "Demo public feed", "Poland", "national", "P2", 60, "https://example.org/demo"],
-        ],
-        "Summary": [["Key", "Value"], ["fixture", "synthetic"]],
-        "Taxonomy": [["Code", "Name", "Includes"], ["demo_topic", "Demo topic", "sample"]],
-        "Technical Verification": [
-            ["ID", "Technical status", "Reuse / licence", "Exact machine endpoint / feed"],
-            [9001, "READY_STRUCTURED", "Synthetic test data", "https://example.org/demo/api"],
-        ],
-        "Verification Evidence": [["ID", "Reference"], [9001, "Synthetic test evidence"]],
-        "Implementation Queue": [["ID", "Work item"], [9001, "Review demo scope"]],
-    }
-    names = list(sheets)
-    content_types = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">',
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>',
-        '<Default Extension="xml" ContentType="application/xml"/>',
-        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>',
-    ]
-    workbook_sheets = []
-    relationships = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">',
-    ]
-    worksheet_files = []
-    for index, name in enumerate(names, start=1):
-        workbook_sheets.append(
-            f'<sheet name="{escape(name)}" sheetId="{index}" r:id="rId{index}"/>'
-        )
-        relationships.append(
-            f'<Relationship Id="rId{index}" '
-            'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
-            f'Target="worksheets/sheet{index}.xml"/>'
-        )
-        content_types.append(
-            f'<Override PartName="/xl/worksheets/sheet{index}.xml" '
-            'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-        )
-        rows = []
-        for row_number, values in enumerate(sheets[name], start=1):
-            cells = []
-            for column_number, value in enumerate(values, start=1):
-                address = f"{_excel_column(column_number)}{row_number}"
-                if isinstance(value, str):
-                    cells.append(
-                        f'<c r="{address}" t="inlineStr"><is><t>{escape(value)}</t></is></c>'
-                    )
-                else:
-                    cells.append(f'<c r="{address}"><v>{value}</v></c>')
-            rows.append(f'<row r="{row_number}">{"".join(cells)}</row>')
-        worksheet_files.append((
-            f'xl/worksheets/sheet{index}.xml',
-            '<?xml version="1.0" encoding="UTF-8"?>'
-            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-            f'<sheetData>{"".join(rows)}</sheetData></worksheet>',
-        ))
-    content_types.append("</Types>")
-    relationships.append("</Relationships>")
-    workbook = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        f'<sheets>{"".join(workbook_sheets)}</sheets></workbook>'
-    )
-    with ZipFile(path, "w", ZIP_DEFLATED) as archive:
-        archive.writestr("[Content_Types].xml", "".join(content_types))
-        archive.writestr("xl/workbook.xml", workbook)
-        archive.writestr("xl/_rels/workbook.xml.rels", "".join(relationships))
-        for filename, content in worksheet_files:
-            archive.writestr(filename, content)
+WORKBOOK = Path(settings.BASE_DIR) / "data/GeoKlimat_EPIC0_Master_Source_Registry_VERIFIED.xlsx"
 
 
 class RegistryTests(TestCase):
@@ -157,19 +65,18 @@ class RegistryTests(TestCase):
             Source.objects.filter(pk__in=[stale.pk, changed.pk], enabled=True).exists()
         )
 
+    @skipUnless(WORKBOOK.exists(), "registry workbook is not shipped in the public showcase")
     def test_workbook_complete_and_strict_xml(self):
-        with TemporaryDirectory() as directory:
-            path = Path(directory) / "synthetic-registry.xlsx"
-            _write_synthetic_registry(path)
-            data = read_registry(path)
-        self.assertEqual(len(data["tables"]["Master Registry"]), 1)
-        self.assertEqual(len(data["tables"]["Technical Verification"]), 1)
-        self.assertEqual(len(data["tables"]["Verification Evidence"]), 1)
-        self.assertEqual(len(data["tables"]["Implementation Queue"]), 1)
-        self.assertEqual(len(data["tables"]["Taxonomy"]), 1)
+        data = read_registry(WORKBOOK)
+        self.assertEqual(len(data["tables"]["Master Registry"]), 219)
+        self.assertEqual(len(data["tables"]["Technical Verification"]), 219)
+        self.assertEqual(len(data["tables"]["Verification Evidence"]), 37)
+        self.assertEqual(len(data["tables"]["Implementation Queue"]), 99)
+        self.assertEqual(len(data["tables"]["Taxonomy"]), 15)
         with self.assertRaises(ValueError):
             xml(b'<!DOCTYPE a [<!ENTITY b "bad">]><a>&b;</a>')
 
+    @skipUnless(WORKBOOK.exists(), "registry workbook is not shipped in the public showcase")
     def test_import_dry_run_idempotence_and_preservation(self):
         call_command("seed_sources", stdout=io.StringIO())
         original = Source.objects.get(slug="gios")
@@ -178,29 +85,41 @@ class RegistryTests(TestCase):
         item = Item.objects.create(
             source=original, external_id="kept", title="Kept", url="https://www.gov.pl/test"
         )
-        with TemporaryDirectory() as directory:
-            path = Path(directory) / "synthetic-registry.xlsx"
-            _write_synthetic_registry(path)
-            call_command("import_registry", str(path), stdout=io.StringIO())
-            self.assertFalse(RegistryEntry.objects.exists())
-            call_command("import_registry", str(path), apply=True, stdout=io.StringIO())
-            sources = Source.objects.count()
-            call_command("import_registry", str(path), apply=True, stdout=io.StringIO())
+        call_command("import_registry", stdout=io.StringIO())
+        self.assertFalse(RegistryEntry.objects.exists())
+        call_command("import_registry", apply=True, stdout=io.StringIO())
+        sources = Source.objects.count()
+        call_command("import_registry", apply=True, stdout=io.StringIO())
         self.assertEqual(Source.objects.count(), sources)
-        self.assertEqual(RegistryEntry.objects.count(), 1)
+        self.assertEqual(RegistryEntry.objects.count(), 219)
         self.assertEqual(RegistryRelease.objects.count(), 1)
         self.assertTrue(Item.objects.filter(pk=item.pk).exists())
         original.refresh_from_db()
         self.assertTrue(original.enabled)
         self.assertFalse(Source.objects.filter(slug__startswith="registry-", enabled=True).exists())
         self.assertEqual(
-            RegistryEntry.objects.get(registry_id=9001).integration_state, "needs_connector"
+            RegistryEntry.objects.get(registry_id=169).integration_state, "requires_access"
         )
-        self.assertContains(self.client.get("/registry/9001/"), "needs_connector")
+        self.assertEqual(RegistryEntry.objects.get(registry_id=61).sources.get().slug, "gdos")
+        self.assertEqual(
+            RegistryEntry.objects.get(registry_id=46).technical["Technical status"],
+            "READY_API_DOCS",
+        )
+        self.assertContains(self.client.get("/registry/"), "219")
+        self.assertContains(self.client.get("/registry/169/"), "requires_access")
+        for key in (29, 43, 56, 169, 193, 194):
+            self.assertContains(
+                self.client.get(f"/registry/{key}/"), "Zaakceptowany wyjątek odbioru"
+            )
+        for key in (193, 194):
+            self.assertEqual(
+                RegistryEntry.objects.get(registry_id=key).integration_state, "configured"
+            )
+        self.assertNotContains(self.client.get("/registry/46/"), "Zaakceptowany wyjątek odbioru")
         self.assertContains(
-            self.client.get("/registry/workbook/?sheet=Taxonomy"), "demo_topic"
+            self.client.get("/registry/workbook/?sheet=Taxonomy"), "emissions_ets_cbam"
         )
-        self.assertEqual(self.client.get("/registry/9999/").status_code, 404)
+        self.assertEqual(self.client.get("/registry/999/").status_code, 404)
 
     def test_activation_gate(self):
         Source.objects.create(

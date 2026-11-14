@@ -1,8 +1,11 @@
 <!doctype html>
 <html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Historia — {{ item.title }}</title>
-<style>body{font:17px/1.6 system-ui,sans-serif;background:#f4f6f1;color:#16392f;margin:0}main{max-width:1000px;margin:auto;padding:32px}a{color:#176448}article{background:white;padding:24px;margin:20px 0;border-radius:12px}dd{overflow-wrap:anywhere;margin:0 0 16px}dt{font-weight:bold}</style></head>
-<body><main><a href="/">← Aktualności</a><h1>{{ item.title }}</h1>
+<style>body{font:17px/1.6 system-ui,sans-serif;background:#f4f6f1;color:#16392f;margin:0}main{max-width:1000px;margin:auto;padding:0 32px 32px}main:focus{outline:none}a{color:#176448}article{background:white;padding:24px;margin:20px 0;border-radius:12px}dd{overflow-wrap:anywhere;margin:0 0 16px}dt{font-weight:bold}</style>{% include "partials/site_styles.html" %}</head>
+<body>{% include "partials/site_nav.html" %}<main id="tresc" tabindex="-1"><h1>{{ item.title }}</h1>
+{% if item.source.config.mode == 'copernicus_wms' and item.metadata.service == 'WMS' %}
+{% include "partials/copernicus_wms.html" %}
+{% endif %}
 {% if item.metadata.listing_scope == 'ecmwf_ecds_collections' %}
 <section><h2>ECMWF — metadane kolekcji ECDS, nie pobrane prognozy</h2>
 <p>{{ item.metadata.attribution }}. ID: {{ item.metadata.collection_id }}.
@@ -18,7 +21,7 @@ Nie pobrano rastrów/GRIB/NetCDF ani pełnego katalogu ECMWF, nie zweryfikowano 
 Warunki pobrań nie zostały zaakceptowane.
 <a href="{{ item.metadata.download_conditions_url }}" rel="noopener noreferrer">Instrukcja dostępu ECMWF</a>.</p></section>
 {% endif %}
-<p><a href="{{ item.url }}" rel="noopener noreferrer">Otwórz publikację źródłową</a></p>
+<p><a href="{{ item.url }}" rel="noopener noreferrer">{% if item.source.config.mode == 'copernicus_wms' and item.metadata.service == 'WMS' %}Otwórz zasób źródłowy{% else %}Otwórz publikację źródłową{% endif %}</a></p>
 {% if item.metadata.listing_scope == 'clms_cdse_collections' %}
 <section><h2>CLMS — opis kolekcji w CDSE, nie pobrane dane</h2>
 <p>{{ item.metadata.attribution }}. <a href="{{ item.metadata.license_url }}" rel="noopener noreferrer">Polityka danych CLMS</a>.</p>
@@ -146,7 +149,7 @@ Map, geometrii, rastrów i podstron nie pobrano. Odnośnik źródłowy prowadzi 
 <article aria-labelledby="unep-heading">
 <h2 id="unep-heading">UNEP — {{ item.metadata.source_document_type }}</h2>
 <p>Data podana na karcie: {{ item.metadata.source_publication_date_text }}. Zapis z precyzją dnia; nie jest datą aktualizacji ani wejścia przepisów w życie.</p>
-<p>Metadane czterech sekcji strony News, Stories &amp; Speeches. Pełnego tekstu, filmów, obrazów i archiwum nie pobrano; wpis nie jest analizą raportu ani potwierdzeniem otwartego naboru.</p>
+<p>Metadane kart z listy strony News, stories &amp; speeches. Pełnego tekstu, filmów, obrazów i archiwum nie pobrano; wpis nie jest analizą raportu ani potwierdzeniem otwartego naboru.</p>
 </article>
 {% endif %}
 {% if item.metadata.listing_scope == 'ipcc_initial_report_cards' %}
@@ -167,6 +170,7 @@ Map, geometrii, rastrów i podstron nie pobrano. Odnośnik źródłowy prowadzi 
 <p><a href="{{ item.metadata.successor_portal_url }}" rel="noopener noreferrer">Nowy portal GUS</a> — przeniesienie tego katalogu nie zostało jeszcze zweryfikowane.</p>
 </article>
 {% endif %}
+{% if user.is_staff and item.metadata.record_kind == 'dataset_collection' and item.source.slug == 'registry-181-jrc-environment' %}<p><a href="{% url 'jrc_files' item.pk %}">Pliki zbioru JRC i licencje (pobranie pojedynczego pliku CC BY na żądanie)</a></p>{% endif %}
 {% if item.metadata.listing_scope == 'active_station_catalogue' %}
 <article aria-labelledby="station-heading">
 <h2 id="station-heading">Stacja GIOŚ — {{ item.metadata.station_code }}</h2>
@@ -220,5 +224,5 @@ Map, geometrii, rastrów i podstron nie pobrano. Odnośnik źródłowy prowadzi 
 <h2>Historia tego rekordu</h2><p>Przechowujemy metadane i pobrany fragment, nie pełne archiwum strony. Wersja bazowa przedstawia stan w chwili uruchomienia historii.</p>
 {% if legal_links %}<h2>Procesy i terminy</h2><ul>{% for link in legal_links %}<li><a href="{% url 'legal_detail' link.process_id %}">{{ link.process.identifier }} — {{ link.process.title }}</a> · {{ link.get_origin_display }}{% if not link.is_current %} · źródło zmienione — do kontroli{% endif %}</li>{% endfor %}</ul>{% endif %}
 {% for version in versions %}<article><h3>Wersja {{ version.number }} · {{ version.observed_at|date:"d.m.Y H:i" }}</h3><p>Tryb: {{ version.origin }}. Zmienione pola: {{ version.changed_fields|join:", " }}</p><details><summary>Stan zapisany w tej wersji</summary><dl>{% for key,value in version.snapshot.items %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></details></article>{% empty %}<p>Rekord oczekuje na normalizację.</p>{% endfor %}
-{% if versions.has_previous %}<a href="?page={{ versions.previous_page_number }}">Nowsze</a>{% endif %} Strona {{ versions.number }} / {{ versions.paginator.num_pages }} {% if versions.has_next %}<a href="?page={{ versions.next_page_number }}">Starsze</a>{% endif %}
-</main></body></html>
+<nav aria-label="Strony historii">{% if versions.has_previous %}<a href="?page={{ versions.previous_page_number }}">Nowsze</a>{% endif %} Strona {{ versions.number }} / {{ versions.paginator.num_pages }} {% if versions.has_next %}<a href="?page={{ versions.next_page_number }}">Starsze</a>{% endif %}</nav>
+</main>{% include "partials/site_footer.html" %}</body></html>

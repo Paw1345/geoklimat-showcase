@@ -67,6 +67,77 @@ class GdosServicesTests(TestCase):
         self.assertEqual(entries[2].url, regional + "%")
         self.assertIn("dodatkowy znak %", entries[2].metadata["source_link_warning"])
 
+    def test_plain_and_anchored_additional_services_are_metadata_only(self):
+        additional = (
+            "https://bankdanych.gdos.gov.pl/backend/wms",
+            "https://bankdanych.gdos.gov.pl/backend/wfs",
+            "https://inwazyjne.gdos.gov.pl/geoserver/wms",
+            "https://inwazyjne.gdos.gov.pl/geoserver/wfs",
+        )
+        for anchored in (False, True):
+            with self.subTest(anchored=anchored):
+                extra = (
+                    b"".join(f'<a href="{url}">WMS/WFS</a>'.encode() for url in additional)
+                    if anchored
+                    else b"".join(f"<p>usługa: {url}<br></p>".encode() for url in additional)
+                )
+                self.http.reset_mock()
+                self.http.get.return_value.body = body().replace(b"</div>", extra + b"</div>")
+                entries, rejected, _, _ = fetch_entries(self.source, self.http)
+                self.assertEqual((len(entries), rejected), (7, 0))
+                self.assertEqual([e.url for e in entries[3:]], list(additional))
+                self.assertEqual([e.metadata["service"] for e in entries[3:]], ["WMS", "WFS"] * 2)
+                for entry in entries[3:]:
+                    self.assertEqual(entry.metadata["operation"], "service_endpoint")
+                    self.assertEqual(entry.metadata["catalogue_url"], URL)
+                    self.assertIn("Nie potwierdzono", entry.metadata["source_link_warning"])
+                    self.assertFalse(entry.published or entry.summary)
+                self.assertIn("1 km", entries[3].metadata["source_link_warning"])
+                self.http.get.assert_called_once_with(URL, {})
+
+    def test_additional_service_schema_duplicate_and_shared_budget_fail_closed(self):
+        url = "https://bankdanych.gdos.gov.pl/backend/wms"
+        for candidate in (url + "?REQUEST=GetMap", url + "#f", url + "/other", url + ":bad"):
+            with self.subTest(candidate=candidate):
+                self.http.get.return_value.body = body().replace(
+                    b"</div>", f"<p>{candidate}</p></div>".encode()
+                )
+                with self.assertRaises(FetchError):
+                    fetch_entries(self.source, self.http)
+        for links, extra in (
+            ((WMS, WFS, url), f"<p>{url}</p>"),
+            (
+                (WMS, WFS, *[FILE.replace("ParkiNarodowe", f"Type{i}") for i in range(78)]),
+                f"<p>{url}</p>",
+            ),
+        ):
+            self.http.get.return_value.body = body(links).replace(
+                b"</div>", extra.encode() + b"</div>"
+            )
+            with self.assertRaises(FetchError):
+                fetch_entries(self.source, self.http)
+
+    def test_comments_and_hidden_script_urls_are_not_catalogue_records(self):
+        url = "https://bankdanych.gdos.gov.pl/backend/wms"
+        hidden = f"<!-- {url} --><script>{url}</script><style>{url}</style>".encode()
+        self.http.get.return_value.body = body().replace(b"</div>", hidden + b"</div>")
+        entries, _, _, _ = fetch_entries(self.source, self.http)
+        self.assertEqual(len(entries), 3)
+
+    def test_additional_import_repeat_and_public_warning_without_service_http(self):
+        url = "https://bankdanych.gdos.gov.pl/backend/wms"
+        self.http.get.return_value.body = body().replace(b"</div>", f"<p>{url}</p></div>".encode())
+        with patch("ingestion.service.Client", return_value=self.http):
+            self.assertEqual(run_batch(SLUG, force=True)[0]["created"], 4)
+            self.assertEqual(run_batch(SLUG, force=True)[0]["unchanged"], 4)
+        item = Item.objects.get(url=url)
+        self.assertEqual(item.revision, 1)
+        with patch("ingestion.transport.Client.get") as get:
+            response = self.client.get(f"/items/{item.pk}/")
+            self.assertContains(response, "1 km")
+            self.assertContains(response, "Nie potwierdzono dostępności usługi ani licencji")
+        get.assert_not_called()
+
     def test_warning_visible_in_all_public_views_without_fetching_link(self):
         self.http.get.return_value.body = body(
             (

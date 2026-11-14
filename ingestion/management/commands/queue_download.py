@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from ingestion.downloads import enqueue
+from ingestion.downloads import enqueue, file_limit
 from ingestion.models import DataChannel
 from ingestion.transport import FetchError
 
@@ -18,8 +18,14 @@ class Command(BaseCommand):
         ).first()
         if not channel:
             raise CommandError("Select an approved PL/EU file channel")
+        try:
+            limit = file_limit(channel)
+        except FetchError as exc:
+            raise CommandError(str(exc)) from exc
         if not options["apply"]:
-            self.stdout.write(f"Would queue {channel.slug}; no writes or HTTP")
+            self.stdout.write(
+                f"Would queue {channel.slug}; per-file limit {limit} bytes; no writes or HTTP"
+            )
             return
         try:
             job, created = enqueue(channel)

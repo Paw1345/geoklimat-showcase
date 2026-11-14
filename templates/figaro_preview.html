@@ -1,0 +1,44 @@
+{% extends "registry_base.html" %}
+{% block title %}FIGARO — surowe dane za 2015 rok — GeoKlimat{% endblock %}
+{% block content %}
+<h1>FIGARO — emisje do powietrza za 2015 rok</h1>
+{% if channel %}<p><a href="{% url 'data_detail' channel.pk %}">Wróć do kanału</a> · <a href="{% url 'registry_detail' channel.registry.pk %}">Karta rejestru JRC</a></p>{% endif %}
+<p>Podgląd jednej lokalnej kopii historycznej. Rok obserwacji: <strong>2015</strong>, nie bieżący rok.
+Kody refArea obejmują również obszary spoza UE; konfiguracja „EU” nie oznacza maski obecnej UE27.</p>
+<p>Nie sumujemy wartości, nie przeliczamy jednostek i nie rozwijamy kodów colPi ani FIGW1 bez potwierdzonego słownika.
+CO2, CH4 i N2O mają jednostkę kt; F-gases — kt CO2e. Wartości ujemne i zapis „-0” pozostają bez zmian.
+Końcowa spacja w colPi jest częścią kodu; oznaczamy ją opisem, ale nie usuwamy.</p>
+<form method="get" class="crfop-form">
+{{ form.non_field_errors }}
+<p>{{ form.area.label_tag }} {{ form.area }} {{ form.area.errors }}</p>
+<p>{{ form.indicator.label_tag }} {{ form.indicator }} {{ form.indicator.errors }}</p>
+{{ form.job }} {{ form.job.errors }} {{ form.page.errors }}
+<button type="submit">Filtruj lokalną kopię</button>
+{% if channel %}<a href="{% url 'figaro_preview' channel.pk %}">Wybierz najnowszą dostępną kopię</a>{% endif %}
+</form>
+{% if error %}<p role="alert">{{ error }} Nie pokazujemy częściowych wyników. Wróć do kanału.</p>
+{% elif copy %}
+<section aria-labelledby="figaro-copy"><h2 id="figaro-copy">Zweryfikowana kopia i pochodzenie</h2>
+<p>Kopia nr {{ copy.job_id }}. Zweryfikowano cały plik: {{ copy.records }} rekordów, {{ copy.source_bytes }} bajtów.
+Pasuje do filtrów: {{ page.paginator.count }}. Pokazujemy najwyżej 50 rekordów na stronę, w kolejności źródłowej.</p>
+<p>Wiek kopii liczymy od pobrania, nie od roku obserwacji. Pobrano: {{ copy.copied_at }}. Kopia wygasa: {{ copy.expires_at }}.</p>
+<p class="checksum">SHA-256: <code>{{ copy.source_sha256 }}</code></p>
+<p class="funding-attribution">{{ copy.attribution }} · <a href="{{ copy.license }}">Licencja CC BY 4.0</a> · <a href="{{ copy.dataset }}">Zbiór JRC</a> · <a href="{{ copy.distribution }}">Dystrybucja</a> · <a href="{{ copy.source_url }}">Oryginalny plik źródłowy</a></p>
+<p><a href="{% url 'file_download' copy.job_id %}">Eksportuj cały oryginalny plik (nie wynik filtrów)</a> · <a href="{{ links.current }}">Odnośnik do tej strony przypiętej kopii</a></p>
+</section>
+{% if page.paginator.count %}
+<div class="scroll" role="region" aria-label="Surowe rekordy FIGARO za 2015 rok" tabindex="0">
+<table class="mwp-table"><caption>Surowe pola źródłowe — FIGARO2015</caption>
+<thead><tr><th scope="col">category</th><th scope="col">codeIndicator</th><th scope="col">refArea</th><th scope="col">colPi</th><th scope="col">timePeriod</th><th scope="col">unit</th><th scope="col">obsValue</th></tr></thead>
+<tbody>{% for row in page %}<tr>
+<td>{{ row.category }}</td><td>{{ row.codeIndicator }}</td><td>{{ row.refArea }}</td>
+<td><code class="mwp-value">{{ row.colPi }}</code>{% if row.colPi|last == ' ' %}<br><small>Końcowa spacja w kodzie</small>{% endif %}</td>
+<td>{{ row.timePeriod }}</td><td>{{ row.unit }}</td><td><code class="mwp-value">{{ row.obsValue }}</code></td>
+</tr>{% endfor %}</tbody></table></div>
+{% else %}<p role="status">Brak rekordów pasujących do filtrów w tej zweryfikowanej kopii.</p>{% endif %}
+<nav aria-label="Strony wyników FIGARO"><p>Strona {{ page.number }} z {{ page.paginator.num_pages }}.
+{% if links.previous %}<a href="{{ links.previous }}">Poprzednia</a>{% endif %}
+{% if links.next %}<a href="{{ links.next }}">Następna</a>{% endif %}</p></nav>
+{% elif form.errors %}<p role="alert">Popraw parametry zapytania. Nie pokazujemy wyników dla błędnego zapytania.</p>
+{% else %}<p role="status">Brak ukończonej, niewygasłej lokalnej kopii. Ten widok niczego nie pobiera.</p>{% endif %}
+{% endblock %}

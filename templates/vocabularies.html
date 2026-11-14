@@ -2,7 +2,7 @@
 {% block content %}<h1>Wartości słowników INSPIRE — PL/EN</h1>
 <p>Osiem wybranych schematów: tematy INSPIRE, środowisko, wody i gleba. Nie jest to pełny rejestr, EuroVoc ani ocena aktualnego statusu kodów. Etykiety PL pochodzą od dostawcy; przy ich braku wyświetlamy EN, bez automatycznego tłumaczenia. Definicje są w języku EN.</p>
 <form method="get">{{ form.as_p }}<button>Filtruj zapisane wartości</button></form>
-{% if source %}<p>Kanał: {{ source.name }} · {% if source.enabled and source.activation_approved %}aktywny{% else %}wyłączony{% endif %} · ostatni udany import {{ source.last_success_at|default:"brak" }}.</p><p>{{ source.scope }}</p>{% else %}<p>Kanał nie został jeszcze skonfigurowany.</p>{% endif %}
+{% for source in sources %}<p>Kanał: {{ source.name }} · {% if source.enabled and source.activation_approved %}aktywny{% else %}wyłączony{% endif %} · ostatni udany import {{ source.last_success_at|default:"brak" }}.</p><p>{{ source.scope }}</p>{% empty %}<p>Kanał nie został jeszcze skonfigurowany.</p>{% endfor %}
 <p>Otwarcie strony i eksport czytają tylko bazę, bez pobierania URI. Dat publikacji nie znamy; czas importu nie jest datą zmiany wartości u dostawcy. 35 wpisów tematów w odpowiedzi nie oznacza 35 obecnie obowiązujących tematów dyrektywy — statusów nie pobieramy.</p>
 {% if items %}<p>Zapisanych wartości pasujących do filtra: {{ items.paginator.count }}.</p>{% endif %}
 {% for item in items %}<article><h2><a href="{% url 'item_history' item.pk %}">{{ item.title }}</a></h2>

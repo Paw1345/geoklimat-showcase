@@ -16,8 +16,12 @@ from django.conf import settings
 from ingestion.sopo_policy import ERROR as SOPO_ERROR
 from ingestion.sopo_policy import blocked_url as sopo_blocked_url
 
+ERROR_BODY_BYTES = 2048
+
 
 class FetchError(Exception):
+    body = b""
+
     def __init__(self, message, status=None, retry_after=0, url=None, redirect_url=None):
         super().__init__(message)
         self.status = status
@@ -113,7 +117,13 @@ def retry_delay(value):
 
 
 def request_timeout(url):
-    """Allow more time only for reviewed slow WFS and Copernicus STAC searches."""
+    """Allow more time only for reviewed slow WFS, Copernicus STAC and EDO CDI requests."""
+    from ingestion.edo_cdi_raster import TIMEOUT as EDO_TIMEOUT
+    from ingestion.edo_cdi_raster import is_request as is_edo_cdi_request
+
+    if is_edo_cdi_request(url):
+        # GetCoverage answered only after ~13 s in the 2026-10-14 probe.
+        return EDO_TIMEOUT
     parsed = urlsplit(url)
     params = parse_qs(parsed.query)
     if (
@@ -282,10 +292,10 @@ class Client:
             delay = max(delay, 31)
         return rules, delay
 
-    def funding_search(self, page):
+    def funding_search(self, page, profile="life"):
         from ingestion.funding_search_transport import search
 
-        return search(self, page)
+        return search(self, page, profile)
 
     def get(self, url, headers=None, allow_partial=False, gios_station_exception=False):
         if sopo_blocked_url(url):
@@ -315,9 +325,13 @@ class Client:
             raise FetchError("Redirect destination disallowed by robots")
         accepted = (200, 206) if allow_partial else (200, 304)
         if response.status not in accepted:
-            raise FetchError(
+            error = FetchError(
                 "Unexpected HTTP response",
                 response.status,
                 3600 if gios_station_exception else 0,
             )
+            # A bounded excerpt lets a reviewed collector recognise a documented provider
+            # error; it is never stored or shown, and the generic message stays unchanged.
+            error.body = bytes((response.body or b"")[:ERROR_BODY_BYTES])
+            raise error
         return response

@@ -7,8 +7,11 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.template.loader import render_to_string
 from django.test import TransactionTestCase, override_settings
+from django.utils import timezone
 
+from core.stac import report
 from core.test_stac_coverage import StacCoverageTests
 from ingestion.models import DataSnapshot
 from ingestion.stac_integrity import verify_batch
@@ -190,6 +193,44 @@ class StacIntegrityTests(TransactionTestCase):
         self.channel.access_approved = False
         self.channel.save(update_fields=["access_approved"])
         self.assertEqual(self.client.get(query).status_code, 409)
+
+    def test_web_verification_labels_only_the_pinned_batch_and_its_time(self):
+        for page in range(1, 27):
+            self.persist(page=page)
+        self.harvest.pages, self.harvest.records = 26, 52
+        self.harvest.save(update_fields=["pages", "records"])
+        self.client.force_login(
+            get_user_model().objects.create_user(username="batch", is_staff=True)
+        )
+        query = f"/data/stac/?verify=1&channel={self.channel.pk}&harvest={self.harvest.pk}"
+        with patch("core.stac.timezone.now", return_value=self.now):
+            response = self.client.get(query)
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        for text in (
+            'id="stac-verification"',
+            "Zweryfikowano tylko strony 1–25",
+            "Pozostałe strony i pełne pokrycie nie są potwierdzone",
+            self.now.astimezone(timezone.get_current_timezone()).isoformat(),
+            "Sprawdź następną paczkę tego samego przebiegu",
+        ):
+            self.assertTrue(text in html, text)
+
+    def test_template_does_not_assign_foreign_batch_verification_to_a_row(self):
+        self.persist()
+        result = report(verify_channel=self.channel.pk, verify_harvest=self.harvest.pk)
+        for field in ("channel_id", "harvest_id"):
+            with self.subTest(field=field):
+                original = result["rows"][0][field]
+                result["rows"][0][field] += 1000
+                html = render_to_string("stac_coverage.html", {"report": result})
+                self.assertTrue("Nie sprawdzono treści kopii tego przebiegu" in html)
+                self.assertFalse("Zweryfikowano tylko strony" in html)
+                result["rows"][0][field] = original
+        result["verification"]["batch_verified"] = False
+        html = render_to_string("stac_coverage.html", {"report": result})
+        self.assertTrue("Nie sprawdzono treści kopii tego przebiegu" in html)
+        self.assertFalse('id="stac-verification"' in html)
 
     def test_variant_counts_and_batch_limit(self):
         self.persist()

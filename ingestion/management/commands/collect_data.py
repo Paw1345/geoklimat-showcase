@@ -25,6 +25,7 @@ class Command(BaseCommand):
             dry_run=not options["apply"],
             force=options["force"],
             on_demand=options["on_demand"],
+            manual=True,
         )
         self.stdout.write(json.dumps(results, ensure_ascii=False))
         if any(row["status"] == "failed" for row in results):

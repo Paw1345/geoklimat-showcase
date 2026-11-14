@@ -114,17 +114,21 @@ class StacBoundedTests(TransactionTestCase):
         self.assertEqual(result["pages"], 4)
 
     def test_second_page_failure_preserves_first_and_resumes_its_cursor(self):
-        client = self.transport()
-        url = start_url(self.bounded)
-        client.get.side_effect = [self.response(url), FetchError("timeout")]
-        with self.assertRaises(FetchError):
-            advance_harvest(self.bounded, client)
-        harvest = self.bounded.harvests.first()
-        self.assertEqual(harvest.pages, 1)
-        self.assertEqual(DataSnapshot.objects.count(), 1)
-        result = advance_harvest(self.bounded, self.transport())
-        self.assertEqual(result["harvest_id"], harvest.pk)
-        self.assertEqual(result["pages"], 3)
+        # Fixture and scan must name one window even across a wall-clock second.
+        with patch("django.utils.timezone.now", return_value=self.now):
+            client = self.transport()
+            url = start_url(self.bounded)
+            client.get.side_effect = [self.response(url), FetchError("timeout")]
+            with self.assertRaisesMessage(FetchError, "timeout"):
+                advance_harvest(self.bounded, client)
+            harvest = self.bounded.harvests.first()
+            self.assertEqual(client.get.call_count, 2)
+            self.assertEqual(harvest.pages, 1)
+            self.assertEqual(harvest.next_url, query_url(url, token=2))
+            self.assertEqual(DataSnapshot.objects.count(), 1)
+            result = advance_harvest(self.bounded, self.transport())
+            self.assertEqual(result["harvest_id"], harvest.pk)
+            self.assertEqual(result["pages"], 3)
 
     def test_revoked_approval_during_get_refuses_snapshot_before_commit(self):
         client = self.transport()

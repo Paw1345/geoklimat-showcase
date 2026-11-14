@@ -1,4 +1,4 @@
-{% extends "registry_base.html" %}{% block content %}
+{% extends "registry_base.html" %}{% block title %}{{ entry.registry_id }}. {{ entry.name }} — GeoKlimat{% endblock %}{% block content %}
 <h1>{{ entry.registry_id }}. {{ entry.organization }} — {{ entry.name }}</h1>
 <p>{{ entry.integration_state }}: {{ entry.integration_note }}</p>
 {% if entry.registry_id == 62 %}

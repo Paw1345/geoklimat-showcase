@@ -1,4 +1,4 @@
-"""User-approved bounded LIFE public search POST; never an arbitrary POST client."""
+"""User-approved bounded public search POSTs (LIFE, Horizon); never an arbitrary POST client."""
 
 import json
 import time
@@ -11,20 +11,50 @@ from django.conf import settings
 from ingestion.transport import Client, FetchError, Response, validate_url
 
 BASE = "https://api.tech.ec.europa.eu/search-api/prod/rest/search"
-QUERY = {
-    "bool": {
-        "must": [
-            {"terms": {"type": ["1", "2", "8"]}},
-            {"terms": {"status": ["31094501", "31094502"]}},
-            {"terms": {"frameworkProgramme": ["43252405"]}},
-            {"term": {"language": "en"}},
-        ]
-    }
+# LIFE approved 2026-10-01; Horizon Europe added by the user's card 2026-10-08T08:12Z.
+# The Horizon programme id is UNCONFIRMED until the live probe on the user's PC.
+# P4 2026-10-15: other EU programmes with environment, climate, energy or civil
+# protection calls, each kept whole; programme ids read by the PC census (see
+# docs/FUNDING-PROGRAMMES.md). "tolerant" profiles accept the portal's newer topic
+# addresses, partnership call references and byte-identical duplicate rows.
+# Census on the PC 2026-10-15T08:00Z (open/forthcoming EN topics, 1204 rows, 25 pages):
+# each id below held only topics with its own identifier prefix.
+PROGRAMMES = {
+    "CEF": "43251567",  # Connecting Europe Facility (energy, transport): 11
+    "DIGITAL": "43152860",  # Digital Europe: 81
+    "EMFAF": "43392145",  # European Maritime, Fisheries and Aquaculture Fund: 1
+    "I3": "44416173",  # Interregional Innovation Investments (ERDF): 9
+    "JTM": "44773066",  # Just Transition Mechanism, public sector loan facility: 2
+    "RENEWFM": "43253967",  # Renewable Energy Financing Mechanism: 1
+}
+PROFILES = {
+    "life": {"frameworks": ("43252405",), "pages": 5, "tolerant": False},
+    "horizon": {"frameworks": ("43108390",), "pages": 20, "tolerant": True},
+    "programmes": {"frameworks": tuple(PROGRAMMES.values()), "pages": 10, "tolerant": True},
 }
 
 
-def request_spec(page):
-    if type(page) is not int or not 1 <= page <= 5:
+def query(profile="life"):
+    if profile not in PROFILES:
+        raise FetchError("Funding search profile outside reviewed scope")
+    return {
+        "bool": {
+            "must": [
+                {"terms": {"type": ["1", "2", "8"]}},
+                {"terms": {"status": ["31094501", "31094502"]}},
+                {"terms": {"frameworkProgramme": list(PROFILES[profile]["frameworks"])}},
+                {"term": {"language": "en"}},
+            ]
+        }
+    }
+
+
+QUERY = query()
+
+
+def request_spec(page, profile="life"):
+    pages = PROFILES[profile]["pages"] if profile in PROFILES else 0
+    if type(page) is not int or not 1 <= page <= pages:
         raise FetchError("Funding search page outside reviewed budget")
     url = (
         BASE
@@ -38,7 +68,7 @@ def request_spec(page):
         f"--{boundary}\r\n"
         'Content-Disposition: form-data; name="query"; filename="query.json"\r\n'
         "Content-Type: application/json\r\n\r\n"
-        + json.dumps(QUERY, separators=(",", ":"))
+        + json.dumps(query(profile), separators=(",", ":"))
         + f"\r\n--{boundary}--\r\n"
     ).encode()
     return url, body, "multipart/form-data; boundary=" + boundary
@@ -96,8 +126,8 @@ class _SearchClient(Client):
             )
 
 
-def search(client, page):
-    url, body, content_type = request_spec(page)
+def search(client, page, profile="life"):
+    url, body, content_type = request_spec(page, profile)
     special = _SearchClient(client, url, body, content_type)
     _, delay = special._policy(url)
     response = special._request(url, delay=delay)

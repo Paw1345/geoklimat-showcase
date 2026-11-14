@@ -27,6 +27,7 @@ PROFILES = {
     108: {
         "home": "https://wfos.gdansk.pl",
         "title": "Wojewódzki Fundusz Ochrony Środowiska i Gospodarki Wodnej w Gdańsku",
+        "skipped_categories": {"Zamówienia publiczne", "Oferta pracy"},
     },
     109: {
         "home": "https://wfosigw.katowice.pl",
@@ -104,7 +105,10 @@ def parse_feed(source, feed, response):
                 "utm_medium": "rss",
                 "utm_campaign": parts.path.strip("/"),
             }
-        category_valid = (
+        # Known non-news categories pass identity checks but are not news records;
+        # any other unknown category still fails the whole batch.
+        skipped = bool(categories) and categories <= p.get("skipped_categories", set())
+        category_valid = skipped or (
             bool(categories) and categories <= p["categories"]
             if "categories" in p
             else "Aktualności" in categories
@@ -124,6 +128,10 @@ def parse_feed(source, feed, response):
             or not category_valid
         ):
             raise FetchError("Regional RSS record identity or category changed")
+        if skipped:
+            urls.add(url)
+            identities.add(identity)
+            continue
         published = row.get("published", "")
         updated = row.get("updated", "") if "updated" in row else ""
         validate_date(published)

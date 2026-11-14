@@ -2,6 +2,7 @@
 {% block title %}Jakość danych — GeoKlimat{% endblock %}
 {% block content %}<h1>Jakość i pokrycie danych</h1>
 <p><a href="{% url 'registry_readiness' %}">Gotowość operacyjna całego rejestru — kanały, dane i pliki</a></p>
+<p><a href="{% url 'quality_gaps' %}">Luki pobierania — ostatni sukces i przerwy dla każdego źródła i kanału</a></p>
 <p>Raport administratora, stan {{ report.generated_at }}. <a href="?format=json">Wersja JSON</a>. Odczyt nie uruchamia pobierania ani napraw.</p>
 <dl>
 <dt>Źródła aktywne / wszystkie</dt><dd>{{ report.sources_active }} / {{ report.sources_total }}</dd>

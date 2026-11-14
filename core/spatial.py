@@ -7,6 +7,7 @@ from django.shortcuts import render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
 
+from ingestion.boundary_mask import MaskError
 from ingestion.data_coverage import MODES
 from ingestion.models import DataChannel
 from ingestion.spatial_geometry import GeometryError
@@ -21,7 +22,9 @@ class SpatialForm(forms.Form):
             kind="geojson",
             access_approved=True,
             config__mode__in=sorted(MODES),
-        ).order_by("name"),
+        )
+        .exclude(config__mode="bdl_features_scan", config__geometry=False)
+        .order_by("name"),
     )
     west = forms.FloatField(label="Zachód — długość geograficzna", initial=14)
     south = forms.FloatField(label="Południe — szerokość geograficzna", initial=49)
@@ -34,6 +37,8 @@ class SpatialForm(forms.Form):
         initial="geometry",
         choices=[
             ("geometry", "Przecięcie geometrii z prostokątem (planarne)"),
+            ("geometry_pl", "Przecięcie z prostokątem i maską Polski (PRG)"),
+            ("geometry_eu", "Przecięcie z prostokątem i maską UE"),
             ("envelope", "Obwiednie — zgodność ze starszym wyszukiwaniem"),
         ],
     )
@@ -115,6 +120,14 @@ def search(request):
                         "Obliczenie geometrii nie powiodło się; nie zwrócono częściowego wyniku."
                     ),
                 }[exc.reason]
+                status = 409
+            except MaskError as exc:
+                error_code = "spatial_mask_" + exc.reason
+                error = (
+                    "Maska administracyjna jest niezainstalowana, nie przeszła kontroli "
+                    "sumy SHA-256 lub topologii albo obiekt nie dał się z nią porównać. "
+                    "Nie zwrócono częściowego wyniku i niczego nie naprawiono."
+                )
                 status = 409
             except (FetchError, DataChannel.DoesNotExist):
                 error = (

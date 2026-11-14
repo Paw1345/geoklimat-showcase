@@ -1,4 +1,4 @@
-{% extends "registry_base.html" %}{% block content %}
+{% extends "registry_base.html" %}{% block title %}STAC Polska/UE — zakres przebiegów — GeoKlimat{% endblock %}{% block content %}
 <h1>STAC Polska/UE — zakres przebiegów i lokalne kopie</h1>
 <p>Stan {{ report.as_of }} · <a href="?format=json">Eksport JSON</a> · <a href="{% url 'data_storage' %}">Pojemność cache</a></p>
 <section><h2>Plan świeżego okna — bez resetu historii</h2>
@@ -48,14 +48,16 @@ Bbox jest prostokątem wyszukiwania, nie dokładną maską granic Polski lub UE.
 {% for row in report.rows %}<article>
 <h2><a href="{% url 'data_detail' row.channel_id %}">{{ row.name }}</a></h2>
 {% if row.harvest_id %}
-{% if row.acquisition_mode == 'bounded_window' %}<p>Wznawialne okno 24h: do 20 stron / 200 scen / 16 MiB, bez zmiany historii i próbek.
+{% if row.acquisition_mode == 'history_scan' %}<p>Skan historyczny: zakres dat zamrożony na starcie, nie dowód pełnej historii aktualnych 30 dni.</p>{% endif %}
+{% if row.acquisition_mode == 'bounded_window' %}<p>Wznawialne okno 24h: do 20 stron / 200 wystąpień rekordów / 16 MiB, bez zmiany historii i próbek.
 Bounded to limit, paused to rezerwa cache; koniec zapytania nie potwierdza pełnej doby ani dokładnej maski.</p>{% endif %}
-{% if row.acquisition_mode == 'recent_sample' %}<p>Świeża próbka: ostatnie 24 godziny, maks. 2 strony / 20 scen.
+{% if row.acquisition_mode == 'recent_sample' %}<p>Świeża próbka: ostatnie 24 godziny, maks. 2 strony / 20 wystąpień rekordów.
 Nie jest pełną dobą ani zamiennikiem historycznego przebiegu. „bounded” oznacza limit próbki, nie koniec katalogu;
 kursor pozostałych stron jest zachowany, ale następny cykl pobierze nowe okno.</p>{% endif %}
 <p><a href="{% url 'stac_scenes' %}?channel={{ row.channel_id }}&amp;harvest={{ row.harvest_id }}&amp;start=1">Katalog scen i eksport GeoJSON pierwszej paczki</a></p>
-<p><a href="?verify=1&amp;channel={{ row.channel_id }}&amp;harvest={{ row.harvest_id }}&amp;start=1">Sprawdź SHA256 i rekordy stron 1–25 tego przebiegu</a></p>
+<h3>1. Koniec zapytania</h3>
 <p>Przebieg #{{ row.harvest_id }} · {{ row.status }} · {% if row.scan_complete %}koniec paginacji{% else %}nie potwierdzono końca paginacji{% endif %} · {% if row.has_cursor %}kursor zapisany{% else %}brak kolejnego kursora{% endif %}.</p>
+<p>To ocena końca tego zapytania, nie obecności wszystkich kopii ani integralności ich treści.</p>
 {% if row.search_start %}<p>Zakres wyszukiwania: {{ row.search_start }} — {{ row.search_end }}.
 Od końca zakresu do raportu: {{ row.search_end_lag_seconds }} sekund. Kolekcja: {{ row.collection }} · bbox: {{ row.bbox }}.</p>{% endif %}
 {% if row.window_timeline %}<p>W bieżącym oknie 30 × 24 godziny:
@@ -64,12 +66,13 @@ Od końca zakresu do raportu: {{ row.search_end_lag_seconds }} sekund. Kolekcja:
 To porównanie zakresów dat, nie licznik brakujących scen ani potwierdzenie awarii źródła.
 Liczba dni kalendarzowych może wynosić 31, ponieważ pierwsza i ostatnia doba są częściowe.
 Rozkład rzeczywistych obserwacji wymaga audytu treści.</p>{% endif %}
-<p>Odczytano {{ row.read_pages }} stron i {{ row.read_record_occurrences }} wystąpień rekordów.
+<h3>2. Dostępność kopii — metadane</h3>
+<p>Zapisane liczniki przebiegu: {{ row.read_pages }} stron i {{ row.read_record_occurrences }} wystąpień rekordów.
 Nie jest to zweryfikowana liczba unikalnych scen.</p>
 <p>Według metadanych dostępne {{ row.available_pages }} / {{ row.read_pages }} stron,
 {{ row.available_record_occurrences }} wystąpień rekordów, {{ row.available_bytes|filesizeformat }}.
 Niedostępne lub odrzucone strony: {{ row.unavailable_pages }}.</p>
-<p>Brak kopii dla {{ row.missing_snapshot_pages|default_if_none:"nie sprawdzono" }} stron.
+<p>Strony bez kopii: {{ row.missing_snapshot_pages|default_if_none:"nie sprawdzono" }}.
 {% if row.missing_page_numbers_sample %}Pierwsze brakujące numery (maks. 20): {{ row.missing_page_numbers_sample }}.{% endif %}
 Zapisane wygasłe kopie: {{ row.expired_snapshot_rows|default_if_none:"nie sprawdzono" }};
 odrzucone kopie z powodu metadanych lub dat: {{ row.rejected_snapshot_rows|default_if_none:"nie sprawdzono" }}.
@@ -77,9 +80,17 @@ Brak kopii nie dowodzi przyczyny jej usunięcia.</p>
 <p>Daty obserwacji z metadanych zachowanych kopii: {{ row.oldest_observation_metadata|default:"Brak" }} — {{ row.newest_observation_metadata|default:"Brak" }}.
 To granice dat, nie dowód ciągłości ani braku luk.</p>
 {% if row.issues %}<p>Wymagany przegląd: {{ row.issues|join:", " }}.</p>{% elif row.all_read_pages_present %}<p>Metadane wskazują zachowanie wszystkich dotychczas odczytanych stron; integralność treści nie jest sprawdzona.</p>{% else %}<p>Nie potwierdzono zachowania wszystkich odczytanych stron.</p>{% endif %}
-{% else %}<p>Brak przebiegu.</p>{% endif %}</article>{% empty %}<p>Brak kanałów STAC.</p>{% endfor %}
-{% if report.verification %}<article><h2>Zweryfikowana paczka lokalnych treści</h2>
-<p>Przebieg #{{ report.verification.harvest_id }}, strony {{ report.verification.start_page }}–{{ report.verification.end_page }}:
+<h3>3. Integralność treści — paczka</h3>
+{% if report.verification.batch_verified and report.verification.channel_id == row.channel_id and report.verification.harvest_id == row.harvest_id %}
+<p>Zweryfikowano tylko strony {{ report.verification.start_page }}–{{ report.verification.end_page }} tego przebiegu.
+<a href="#stac-verification">Wynik i zakres weryfikacji paczki</a>.
+Pozostałe strony i pełne pokrycie nie są potwierdzone.</p>
+{% else %}<p>Nie sprawdzono treści kopii tego przebiegu. Zwykły raport czyta tylko metadane; nie potwierdza SHA256, unikalności scen ani pełnych 30 dni.</p>{% endif %}
+<p><a href="?verify=1&amp;channel={{ row.channel_id }}&amp;harvest={{ row.harvest_id }}&amp;start=1">Sprawdź SHA256 i rekordy stron 1–25 tego przebiegu</a> — jawny odczyt lokalnych treści, bez pobierania od dostawcy.</p>
+{% else %}<p>Brak przebiegu — nie oceniono końca zapytania, dostępności kopii ani integralności.</p>{% endif %}</article>{% empty %}<p>Brak kanałów STAC.</p>{% endfor %}
+{% if report.verification.batch_verified %}<article id="stac-verification"><h2>Zweryfikowana paczka lokalnych treści</h2>
+<p class="checksum">Czas weryfikacji: <time datetime="{{ report.as_of|date:'c' }}">{{ report.as_of|date:'c' }}</time>.</p>
+<p>Kanał #{{ report.verification.channel_id }} · przebieg #{{ report.verification.harvest_id }}, strony {{ report.verification.start_page }}–{{ report.verification.end_page }}:
 {{ report.verification.checked_pages }} kopii, {{ report.verification.checked_bytes|filesizeformat }},
 {{ report.verification.record_occurrences_in_batch }} wystąpień rekordów.
 SHA256, schemat, daty, kolekcja i struktura geometrii zgodne w tej paczce.</p>

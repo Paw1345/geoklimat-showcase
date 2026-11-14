@@ -9,6 +9,7 @@ from django.test import Client, TestCase, override_settings
 from ingestion.legislation import sync_item
 from ingestion.local_ai import (
     FAILURES,
+    MODEL,
     PROMPT_VERSION,
     current,
     enqueue,
@@ -232,7 +233,7 @@ class LocalAITests(TestCase):
         response.status = 200
         response.read.return_value = json.dumps(
             {
-                "model": "qwen3:4b",
+                "model": MODEL,
                 "done": True,
                 "done_reason": "stop",
                 "message": {"content": json.dumps(self.output)},
@@ -333,6 +334,53 @@ class LocalAITests(TestCase):
             validate_output({**base, "summary": "Szkolenie w 2024, wersja 3.0."}, data)["summary"],
             "Szkolenie w 2024, wersja 3.0.",
         )
+
+    def test_numeric_guard_accepts_decimal_comma_only_for_short_fractions(self):
+        data = {"title": "EU fund", "summary": "A budget of €4.3 billion creates 1,500 jobs."}
+        base = {**self.output, "quote": data["summary"]}
+        accepted = validate_output({**base, "summary": "Budżet 4,3 mld euro, 1,500 miejsc."}, data)
+        self.assertEqual(accepted["summary"], "Budżet 4,3 mld euro, 1,500 miejsc.")
+        for value in ("Budżet 4,30 mld euro.", "Około 1.500 miejsc.", "Budżet 4,4 mld euro."):
+            with (
+                self.subTest(value=value),
+                self.assertRaisesRegex(ValueError, "unsupported_number"),
+            ):
+                validate_output({**base, "summary": value}, data)
+
+    def test_month_guard_rejects_invented_month_and_keeps_source_months(self):
+        cases = (
+            (
+                "President was in New York last week for the UN Assembly.",
+                "W grudniu w Nowym Jorku.",
+                False,
+            ),
+            (
+                "Spotkanie 12 października 2026 r. w Warszawie, ustalenia.",
+                "W październiku 2026.",
+                True,
+            ),
+            (
+                "Spotkanie 12 października 2026 r. w Warszawie, ustalenia.",
+                "W listopadzie 2026.",
+                False,
+            ),
+            ("On May 2024 we presented an overview of the software.", "W maju 2024 roku.", True),
+            (
+                "Data will be published on October 6, 2026, at the latest.",
+                "Najpóźniej 6 października 2026.",
+                True,
+            ),
+            ("Termin składania wniosków upływa 01.12.2026 o północy.", "Wnioski do grudnia.", True),
+        )
+        for summary, value, allowed in cases:
+            data = {"title": "Komunikat", "summary": summary}
+            draft = {**self.output, "quote": summary, "summary": value}
+            with self.subTest(value=value):
+                if allowed:
+                    self.assertEqual(validate_output(draft, data)["summary"], value)
+                else:
+                    with self.assertRaisesRegex(ValueError, "unsupported_month"):
+                        validate_output(draft, data)
 
     def test_legacy_ready_invalid_number_cannot_be_reused_or_approved(self):
         draft = self.ready()

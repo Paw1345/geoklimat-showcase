@@ -5,8 +5,10 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.db import DatabaseError
+from django.db import DatabaseError, connection
+from django.template.loader import render_to_string
 from django.test import TransactionTestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from core.stac import report
@@ -187,6 +189,73 @@ class StacCoverageTests(TransactionTestCase):
         self.assertEqual(response["X-Content-Type-Options"], "nosniff")
         self.assertEqual(self.client.post("/data/stac/").status_code, 405)
         self.assertEqual(self.client.get("/data/stac/?format=csv").status_code, 400)
+
+    def test_dashboard_separates_evidence_levels_without_verifying_payloads(self):
+        self.copy()
+        self.client.force_login(
+            get_user_model().objects.create_user(username="levels", is_staff=True)
+        )
+        before = (list(DataChannel.objects.values()), list(DataHarvest.objects.values()))
+        with (
+            patch("core.stac.verify_batch", side_effect=AssertionError("No payload verification")),
+            patch("ingestion.transport.Client.get", side_effect=AssertionError("No HTTP")),
+            CaptureQueriesContext(connection) as queries,
+        ):
+            response = self.client.get("/data/stac/")
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        for heading in (
+            "1. Koniec zapytania",
+            "2. Dostępność kopii — metadane",
+            "3. Integralność treści — paczka",
+        ):
+            self.assertTrue(f"<h3>{heading}</h3>" in html, heading)
+        self.assertTrue("Nie sprawdzono treści kopii tego przebiegu" in html)
+        self.assertFalse('id="stac-verification"' in html)
+        self.assertFalse(any('"payload"' in query["sql"] for query in queries))
+        self.assertEqual(
+            before, (list(DataChannel.objects.values()), list(DataHarvest.objects.values()))
+        )
+
+    def test_dashboard_keeps_missing_expired_and_rejected_metadata_visible(self):
+        snapshot = self.copy()
+        snapshot.expires_at = self.now - timedelta(seconds=1)
+        snapshot.save(update_fields=["expires_at"])
+        self.copy(kind="wrong")
+        self.harvest.pages = 2
+        self.harvest.save(update_fields=["pages"])
+        self.client.force_login(
+            get_user_model().objects.create_user(username="missing", is_staff=True)
+        )
+        response = self.client.get("/data/stac/")
+        html = response.content.decode()
+        for text in (
+            "Strony bez kopii: 1",
+            "Zapisane wygasłe kopie: 1",
+            "invalid_page_metadata",
+            "Nie sprawdzono treści kopii tego przebiegu",
+        ):
+            self.assertTrue(text in html, text)
+        self.assertFalse('id="stac-verification"' in html)
+
+    def test_dashboard_no_harvest_does_not_claim_evidence(self):
+        self.harvest.delete()
+        self.client.force_login(
+            get_user_model().objects.create_user(username="not-started", is_staff=True)
+        )
+        response = self.client.get("/data/stac/")
+        html = response.content.decode()
+        self.assertTrue("Brak przebiegu — nie oceniono końca zapytania" in html)
+        self.assertFalse('id="stac-verification"' in html)
+
+    def test_template_limits_describe_occurrences_not_distinct_scenes(self):
+        result = report()
+        for mode, limit in (("recent_sample", 20), ("bounded_window", 200)):
+            with self.subTest(mode=mode):
+                result["rows"][0]["acquisition_mode"] = mode
+                html = render_to_string("stac_coverage.html", {"report": result})
+                self.assertTrue(f"{limit} wystąpień rekordów" in html)
+                self.assertFalse(f"/ {limit} scen" in html)
 
     def test_malformed_profile_and_naive_observation_bounds(self):
         self.copy(newest_observation="2026-10-01T12:00:00")

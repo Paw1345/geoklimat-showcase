@@ -139,6 +139,50 @@ class DetailDescriptionTests(TestCase):
         self.item.url = "https://www.gov.pl/web/gugik/dokument"
         self.assertFalse(eligible(self.item))
 
+    def test_mkis_profile_only_for_reviewed_news_lists(self):
+        self.item.url = "https://www.gov.pl/web/klimat/dokument"
+        for path in ("wiadomosci", "komunikaty"):
+            self.source.url = f"https://www.gov.pl/web/klimat/{path}"
+            self.assertTrue(eligible(self.item))
+        for path in ("konsultacje-publiczne", "dziennik-urzedowy-ministra-klimatu-i-srodowiska"):
+            self.source.url = f"https://www.gov.pl/web/klimat/{path}"
+            self.assertFalse(eligible(self.item))
+        self.source.url = "https://www.gov.pl/web/klimat/wiadomosci"
+        for url in (
+            "https://www.gov.pl/web/gios/dokument",
+            "https://www.gov.pl/web/klimat/dokument?x=1",
+            "https://www.gov.pl/web/klimat/a/b",
+        ):
+            self.item.url = url
+            self.assertFalse(eligible(self.item))
+
+    def test_mkis_provenance_repeat_and_preservation(self):
+        from ingestion.detail_descriptions import preserve_description
+
+        self.source.url = "https://www.gov.pl/web/klimat/komunikaty"
+        self.source.save()
+        self.item.url = "https://www.gov.pl/web/klimat/dokument"
+        self.item.save()
+        response = Response(200, self.html.encode(), {}, self.item.url)
+        with patch(
+            "ingestion.management.commands.fetch_description.Client.get", return_value=response
+        ) as get:
+            call_command("fetch_description", self.item.pk, stdout=StringIO())
+            self.item.refresh_from_db()
+            self.assertEqual(self.item.summary, "")
+            call_command("fetch_description", self.item.pk, apply=True, stdout=StringIO())
+            call_command("fetch_description", self.item.pk, apply=True, stdout=StringIO())
+            self.assertEqual(get.call_count, 2)
+        self.item.refresh_from_db()
+        proof = self.item.metadata["description_detail"]
+        self.assertEqual(proof["profile"], "mkis-article-v1")
+        self.assertEqual(self.item.revision, 2)
+        self.assertNotIn("metryki", self.item.summary)
+        fields = {"content_hash": proof["listing_hash"], "url": self.item.url}
+        fields["title"] = self.item.title
+        preserve_description(self.item, fields)
+        self.assertEqual(fields["summary"], self.item.summary)
+
     def test_gios_provenance_and_short_placeholder_rejected(self):
         self.source.url = "https://www.gov.pl/web/gios/aktualnosci"
         self.source.save()

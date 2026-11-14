@@ -20,6 +20,12 @@ PROFILES = {
         {"strict_endpoint": True},
     ),
     107: ("feed", "https://wfosigw.bialystok.pl/feed/", {"strict_endpoint": True}),
+    # Department "Zasoby Przyrody" news, reviewed 2026-10-07; /ochrona-srodowiska/ redirects home.
+    125: (
+        "web",
+        "https://umwd.dolnyslask.pl/zasobyprzyrody/aktualnosci/",
+        {"regional_listing": "dolnoslaskie"},
+    ),
     126: ("web", "https://kujawsko-pomorskie.pl/tag/srodowisko/", {"regional_listing": "kujawsko"}),
     127: (
         "feed",
@@ -65,6 +71,7 @@ NOTE = (
     "Bieżące okno RSS/listy, nie pełne archiwum. Bez pobierania załączników."
 )
 SELECTORS = {
+    "dolnoslaskie": ("div.aktualnosci-list", "h2 a", "div.zoomtext > p", "span.date b"),
     "zachodniopomorskie": (
         "article.p-news-tiles-item",
         ".p-news-tiles-item__title a",
@@ -176,6 +183,13 @@ def parse_regional(source, soup, response):
     ):
         raise FetchError("Regional listing left reviewed section")
     row_selector, link_selector, summary_selector, date_selector = SELECTORS[name]
+    base_url = response.url
+    if name == "dolnoslaskie":
+        # TYPO3 page links are relative to its <base>, not to the section URL.
+        base = soup.find("base")
+        if base is None or base.get("href") != "https://umwd.dolnyslask.pl/":
+            raise FetchError("Regional listing base URL changed")
+        base_url = base["href"]
     rows = soup.select(row_selector)
     if not rows or len(rows) > 100:
         raise FetchError("Regional listing missing or row budget exceeded")
@@ -184,10 +198,16 @@ def parse_regional(source, soup, response):
         link = row.select_one(link_selector) if link_selector else row
         if not link or not link.get("href"):
             raise FetchError("Regional listing title link missing")
-        url = urljoin(response.url, link["href"])
+        url = urljoin(base_url, link["href"])
         parts = urlsplit(url)
         if parts.scheme != "https" or parts.netloc != urlsplit(source.url).netloc or url in seen:
             raise FetchError("Regional listing external or duplicate identity")
+        if name == "dolnoslaskie" and (
+            parts.query
+            or parts.fragment
+            or not re.fullmatch(r"/zasobyprzyrody/aktualnosci/artykul/[a-z0-9-]+/", parts.path)
+        ):
+            raise FetchError("Regional listing left environmental section")
         if name == "malopolskie":
             category = row.select_one(".kategoria-tresci")
             if (
@@ -233,6 +253,13 @@ def parse_regional(source, soup, response):
                 if not parsed or "T" not in value or parsed.isoformat() != expected_value:
                     raise FetchError("Regional listing timestamp missing or invalid")
                 published = value
+            elif name == "dolnoslaskie":
+                # Day-first "DD-MM-YYYY"; never let a generic parser swap day and month.
+                match = re.fullmatch(r"(\d{2})-(\d{2})-(\d{4})", node.get_text(strip=True))
+                try:
+                    published = date(int(match[3]), int(match[2]), int(match[1])).isoformat()
+                except (TypeError, ValueError) as exc:
+                    raise FetchError("Regional listing publication date changed") from exc
             else:
                 published = polish_date(node.get_text(" ", strip=True))
         if not title:

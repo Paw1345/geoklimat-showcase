@@ -31,11 +31,24 @@ class Command(BaseCommand):
             raise CommandError("Use bdl_scan; manual scan cannot be activated here")
         if channel.config.get("mode") == "bdl_raw_sample" and options["enable"]:
             raise CommandError("Use activate_bdl_samples for guarded BDL activation")
+        prtr = channel.config.get("mode") == "gios_prtr_releases"
+        if prtr:
+            from ingestion.gios_prtr_table import apply_audit, state
+
+            expected = state(channel)
         results = run_data(channel.slug, dry_run=True)
         self.stdout.write(json.dumps(results, ensure_ascii=False))
         result = results[0]
         if result["status"] == "busy":
             raise CommandError("Collector busy; audit and activation unchanged")
+        if prtr:
+            from ingestion.transport import FetchError
+
+            try:
+                apply_audit(channel, expected, result, options["enable"])
+            except FetchError as exc:
+                raise CommandError(str(exc)) from exc
+            return
         success = result["status"] == "dry_run"
         channel.last_status = "verified" if success else result["status"]
         channel.last_error = result.get("error", "")

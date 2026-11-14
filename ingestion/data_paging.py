@@ -156,6 +156,10 @@ def advance_harvest(channel, client):
         from ingestion.pig_paging import advance
 
         return advance(channel, client)
+    if channel.config.get("mode") == "bdl_features_scan":
+        from ingestion.bdl_paging import advance
+
+        return advance(channel, client)
     config_hash = digest([channel.url, channel.kind, channel.region, channel.config])
     recent = channel.config.get("mode") == "stac_recent"
     if recent:

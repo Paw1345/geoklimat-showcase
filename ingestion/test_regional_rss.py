@@ -23,11 +23,13 @@ def fixture(key=82, count=1, **changes):
         identity = changes.get("identity", host + f"/?p={100 + i}")
         date = changes.get("date", "Tue, 29 Sep 2026 13:21:03 +0000")
         updated = changes.get("updated", "")
+        category = changes["categories"][i] if "categories" in changes else None
+        category = category or changes.get("category", "Aktualności")
         items.append(
             f"<item><title>{escape(changes.get('title', 'Official notice'))}</title>"
             f"<link>{escape(link)}</link><guid>{escape(identity)}</guid>"
             f"<pubDate>{escape(date)}</pubDate>"
-            f"<category>{escape(changes.get('category', 'Aktualności'))}</category>"
+            f"<category>{escape(category)}</category>"
             + (f"<atom:updated>{updated}</atom:updated>" if updated else "")
             + "<description>fixture-contact</description><author>fixture-person</author></item>"
         )
@@ -116,6 +118,34 @@ class RegionalRssTests(SimpleTestCase):
         with self.assertRaises(FetchError):
             self.perform(94, category="Bez kategorii")
         self.assertNotIn("source_categories", self.perform(82)[0][0].metadata)
+
+    def test_gdansk_skips_known_non_news_categories_but_unknown_fails_batch(self):
+        skipped = ["Oferta pracy", "Zamówienia publiczne"]
+        rows, rejected = self.perform(108, count=3, categories=["Aktualności", *skipped])
+        self.assertEqual((len(rows), rejected), (1, 0))
+        self.assertEqual(rows[0].key, self.perform(108)[0][0].key)
+        for category in skipped:
+            self.assertEqual(
+                self.perform(108, count=2, categories=["Aktualności", category])[0][0].url,
+                rows[0].url,
+            )
+        for categories in [
+            ["Aktualności", "Nowa kategoria"],
+            ["Aktualności", "Oferta pracy", "Nowa kategoria"],
+        ]:
+            with self.subTest(categories=categories), self.assertRaises(FetchError):
+                self.perform(108, count=len(categories), categories=categories)
+        # Skipped categories are a Gdańsk-only exception; host and identity checks still apply.
+        with self.assertRaises(FetchError):
+            self.perform(82, category="Oferta pracy")
+        with self.assertRaises(FetchError):
+            self.perform(108, category="Oferta pracy", link="https://example.com/notice/")
+        with self.assertRaises(FetchError):
+            self.perform(108, category="Oferta pracy", identity="https://example.com/?p=1")
+        with self.assertRaises(FetchError):
+            self.perform(
+                108, count=2, category="Oferta pracy", identity="https://wfos.gdansk.pl/?p=1"
+            )
 
     def test_poznan_dated_links_remain_exact_host_and_path(self):
         for link in [

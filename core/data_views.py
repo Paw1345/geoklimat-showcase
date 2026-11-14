@@ -12,7 +12,6 @@ from django.http import (
     Http404,
     HttpResponse,
     HttpResponseBadRequest,
-    StreamingHttpResponse,
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -21,8 +20,9 @@ from django.views.decorators.http import require_GET, require_POST
 from ingestion.data_coverage import MODES, coverage_report, write_verified_export
 from ingestion.data_retention import retained_snapshot
 from ingestion.downloads import enqueue, restart_blocked
-from ingestion.file_exports import export_descriptor, present_job
+from ingestion.file_exports import export_descriptor, present_job, write_verified_file
 from ingestion.models import DataChannel, DataHarvest, DataSnapshot, DownloadJob
+from ingestion.mwp_preview import owns_preview, read_preview
 from ingestion.transport import FetchError
 
 
@@ -61,14 +61,22 @@ def channel_detail(request, pk):
     ).defer("payload")
     latest = snapshots.first()
     preview = ""
+    mwp_preview = None
+    mwp_error = False
+    mwp_view = owns_preview(channel, latest)
     coverage = None
     harvest_coverage = None
-    if channel.config.get("mode") in MODES:
+    if not mwp_view and channel.config.get("mode") in MODES:
         h = channel.harvests.defer("page_fingerprints", "visited_urls").first()
         if h:
             h.channel = channel
             harvest_coverage = coverage_report(h, now)
-    if latest and latest.media_type == "application/json":
+    if mwp_view:
+        try:
+            mwp_preview = read_preview(channel, now)
+        except FetchError:
+            mwp_error = True
+    elif latest and latest.media_type == "application/json":
         retained = export_payload(DataSnapshot.objects.select_related("channel").get(pk=latest.pk))
         if retained:
             data = json.loads(retained)
@@ -93,6 +101,9 @@ def channel_detail(request, pk):
             "file_profile": export_descriptor(channel) if channel.kind == "file" else None,
             "harvests": channel.harvests.defer("page_fingerprints", "visited_urls")[:10],
             "preview": preview,
+            "mwp_preview": mwp_preview,
+            "mwp_error": mwp_error,
+            "mwp_view": mwp_view,
             "coverage": coverage,
             "harvest_coverage": harvest_coverage,
             "snapshots": Paginator(snapshots, 30).get_page(request.GET.get("page")),
@@ -202,6 +213,8 @@ def download(request, pk):
         if snapshot.media_type == "application/geo+json"
         else "json"
         if snapshot.media_type == "application/json"
+        else "tif"
+        if snapshot.media_type == "image/tiff"
         else "bin"
     )
     response["Content-Disposition"] = f'attachment; filename="geoklimat-{snapshot.pk}.{suffix}"'
@@ -244,18 +257,27 @@ def download_file(request, pk):
         channel__access_approved=True,
     )
 
-    def chunks():
-        for snapshot in job.chunks.order_by("pk").iterator(chunk_size=1):
-            yield bytes(snapshot.payload)
-
-    descriptor = export_descriptor(job.channel, job)
-    response = StreamingHttpResponse(chunks(), content_type=descriptor["media_type"])
-    response["Content-Length"] = str(job.total_bytes)
-    response["Content-Disposition"] = f'attachment; filename="{descriptor["filename"]}"'
-    response["X-Content-Type-Options"] = "nosniff"
-    response["Cache-Control"] = "private, no-store"
-    response["ETag"] = '"' + job.sha256 + '"'
-    return response
+    stream = tempfile.SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")
+    try:
+        digest = write_verified_file(job, timezone.now(), stream)
+        stream.seek(0)
+        descriptor = export_descriptor(job.channel, job)
+        response = FileResponse(
+            stream,
+            as_attachment=True,
+            filename=descriptor["filename"],
+            content_type=descriptor["media_type"],
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "private, no-store"
+        response["ETag"] = '"' + digest + '"'
+        return response
+    except FetchError as exc:
+        stream.close()
+        raise Http404("Eksport niedostępny: integralność, zakres lub limit pliku") from exc
+    except Exception:
+        stream.close()
+        raise
 
 
 @staff_member_required
@@ -269,3 +291,50 @@ def restart_file(request, pk):
             "Kanał nie spełnia warunków pobrania. Odśwież jego konfigurację."
         )
     return redirect("data_detail", pk=job.channel_id)
+
+
+def jrc_dataset(pk):
+    from ingestion.jrc_catalogue import CONFIG, SLUG, URL
+    from ingestion.models import Item
+
+    return get_object_or_404(
+        Item,
+        pk=pk,
+        source__slug=SLUG,
+        source__url=URL,
+        source__config=CONFIG,
+        metadata__record_kind="dataset_collection",
+    )
+
+
+@staff_member_required
+@require_GET
+def jrc_files(request, pk):
+    from ingestion.jrc_files import distributions
+    from ingestion.transport import Client
+
+    item = jrc_dataset(pk)
+    try:
+        files, error = distributions(Client(), item.metadata.get("dataset_uri", "")), ""
+    except FetchError as exc:
+        files, error = [], str(exc)[:300]
+    return render(request, "jrc_files.html", {"item": item, "files": files, "error": error})
+
+
+@staff_member_required
+@require_POST
+def jrc_file_request(request, pk, index):
+    from ingestion.jrc_files import distributions, file_channel
+    from ingestion.transport import Client
+
+    item = jrc_dataset(pk)
+    # The file is chosen by position in a fresh provider listing, never by a browser URL.
+    try:
+        files = distributions(Client(), item.metadata.get("dataset_uri", ""))
+        if not 0 <= index < len(files):
+            raise FetchError("JRC file list changed; reload")
+        channel = file_channel(item.metadata["dataset_uri"], item.title, files[index])
+        enqueue(channel)
+    except FetchError:
+        return HttpResponseBadRequest("Plik nie spełnia warunków pobrania. Odśwież listę.")
+    return redirect("data_detail", pk=channel.pk)

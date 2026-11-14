@@ -76,6 +76,20 @@ def validate_geometry(geometry):
                     raise FetchError("MIDAS coordinate outside WGS84 or budget")
 
 
+def validate_point(geometry):
+    if not isinstance(geometry, dict) or geometry.get("type") != "Point":
+        raise FetchError("PIG point geometry missing")
+    point = geometry.get("coordinates")
+    if (
+        not isinstance(point, list)
+        or len(point) != 2
+        or any(type(v) not in (int, float) or not math.isfinite(v) for v in point)
+        or not -180 <= point[0] <= 180
+        or not -90 <= point[1] <= 90
+    ):
+        raise FetchError("PIG point outside WGS84")
+
+
 def collect_sample(channel, client):
     layer = channel.config.get("layer")
     if (

@@ -17,6 +17,7 @@ from ingestion.sopo_policy import ERROR as SOPO_ERROR
 from ingestion.sopo_policy import blocked_source as sopo_blocked_source
 from ingestion.source_policy import SourcePolicyChanged, check_policy, policy_snapshot
 from ingestion.transport import Client, FetchError, ProviderPolicyBlocked
+from ingestion.worker_stop import requested as stop_requested
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,10 @@ def fetch_entries(source, client, conditional=True):
         return fetch_stations(source, client)
     if source.adapter == "json" and source.config.get("mode") == "inspire_schemes":
         from ingestion.inspire_vocabularies import fetch_catalogue
+
+        return fetch_catalogue(source, client)
+    if source.adapter == "json" and source.config.get("mode") == "eu_authority_tables":
+        from ingestion.eu_authority_tables import fetch_catalogue
 
         return fetch_catalogue(source, client)
     if source.adapter == "json" and source.config.get("mode") == "funding_reference":
@@ -269,14 +274,82 @@ def fetch_web_pages(source, client):
 
 
 def ingest_source(source, client):
+    return _ingest_source(source, client)
+
+
+def _marine_link_checked(source):
+    """Lock the reviewed registry linkage while committing a Marine batch."""
+    from ingestion.marine import CONFIG, URL
+    from ingestion.models import RegistryEntry
+
+    if (
+        source.slug != "registry-195"
+        or source.adapter != "stac"
+        or source.url != URL
+        or source.config != CONFIG
+    ):
+        raise SourcePolicyChanged("Marine source identity or linkage changed; batch not persisted")
+    registry = RegistryEntry.objects.select_for_update().filter(registry_id=195).first()
+    if (
+        registry is None
+        or not RegistryEntry.sources.through.objects.select_for_update()
+        .filter(registryentry_id=registry.pk, source_id=source.pk)
+        .exists()
+    ):
+        raise SourcePolicyChanged("Marine source identity or linkage changed; batch not persisted")
+
+
+def _marine_report_payload(result):
+    from ingestion.marine import URL
+    from ingestion.marine_models import PROFILE, validate_report
+
+    payload = {
+        "version": 1,
+        "profile": PROFILE,
+        "root_url": URL,
+        "root_sha256": result.root_sha256,
+        "manifest": list(result.manifest),
+        "inspected_count": result.inspected_count,
+        "valid_count": len(result.entries),
+        "scan_complete": True,
+        "metadata_complete": result.rejected == 0,
+        "issues": [
+            {
+                "product_id": issue.product_id,
+                "url": issue.url,
+                "missing_fields": list(issue.missing_fields),
+            }
+            for issue in result.issues
+        ],
+    }
+    validate_report(payload)
+    return payload
+
+
+def _ingest_source(source, client, *, marine_partial=False):
+    """Internal partial path is not wired to scheduler, config, or public entrypoint."""
     from ingestion.legislation import sync_item
 
     now = timezone.now()
     expected_policy = policy_snapshot(source)
-    source.runs.filter(status="running").update(
-        status="interrupted", finished_at=now, error="Previous process stopped before completion"
-    )
-    run = IngestionRun.objects.create(source=source)
+    if marine_partial:
+        with transaction.atomic():
+            current = Source.objects.select_for_update().filter(pk=source.pk).first()
+            check_policy(current, expected_policy)
+            _marine_link_checked(current)
+            current.runs.filter(status="running").update(
+                status="interrupted",
+                finished_at=now,
+                error="Previous process stopped before completion",
+            )
+            run = IngestionRun.objects.create(source=current)
+    else:
+        source.runs.filter(status="running").update(
+            status="interrupted",
+            finished_at=now,
+            error="Previous process stopped before completion",
+        )
+        run = IngestionRun.objects.create(source=source)
     try:
         current = Source.objects.filter(pk=source.pk).first()
         check_policy(current, expected_policy)
@@ -284,7 +357,19 @@ def ingest_source(source, client):
         ems = source.adapter == "json" and source.config.get("mode") == "ems_initial_activations"
         if ems and source.config.get("terms_accepted") is not True:
             raise FetchError("EMS metadata terms require explicit approval before persistence")
-        entries, rejected, response, digest = fetch_entries(source, client)
+        if marine_partial:
+            from ingestion.marine import collect_catalogue
+
+            result = collect_catalogue(source, client, allow_partial=True)
+            entries, rejected, response, digest = (
+                result.entries,
+                result.rejected,
+                result.response,
+                result.digest,
+            )
+            marine_report = _marine_report_payload(result)
+        else:
+            entries, rejected, response, digest = fetch_entries(source, client)
         run.http_status = response.status
         run.response_hash = digest
         run.fetched = len(entries)
@@ -294,6 +379,8 @@ def ingest_source(source, client):
             current = Source.objects.select_for_update().filter(pk=source.pk).first()
             check_policy(current, expected_policy)
             source = current
+            if marine_partial:
+                _marine_link_checked(source)
             for entry in entries:
                 fields = {
                     "title": entry.title,
@@ -336,10 +423,15 @@ def ingest_source(source, client):
             run.status = "partial" if rejected else "success"
             if response.status == 304:
                 run.status = "not_modified"
-            source.failures = 0
-            source.last_success_at = now
+            if not (marine_partial and rejected):
+                source.failures = 0
+                source.last_success_at = now
             source.next_fetch_at = now + timedelta(minutes=max(15, source.interval_minutes))
-            if source.adapter != "eli" and response.status != 304:
+            if (
+                source.adapter != "eli"
+                and response.status != 304
+                and not (marine_partial and rejected)
+            ):
                 source.etag = response.headers.get("etag", "")[:500]
                 source.last_modified = response.headers.get("last-modified", "")[:100]
             source.save(
@@ -351,6 +443,10 @@ def ingest_source(source, client):
                     "last_modified",
                 ]
             )
+            if marine_partial:
+                from ingestion.marine_models import MarineCatalogueReport
+
+                MarineCatalogueReport.objects.create(run=run, payload=marine_report)
             run.finished_at = timezone.now()
             run.save()
     except Exception as exc:
@@ -395,6 +491,8 @@ def run_batch(source_slug=None, force=False, dry_run=False, limit=None):
             return [{"status": "busy"}]
         client = Client()
         for source in sources:
+            if stop_requested():
+                break
             if dry_run:
                 try:
                     entries, rejected, response, _ = fetch_entries(

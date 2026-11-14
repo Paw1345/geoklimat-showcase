@@ -7,8 +7,8 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 
 from ingestion.marine import CONFIG, URL, product_url
-from ingestion.models import RegistryEntry, RegistryRelease, Source
-from ingestion.service import fetch_entries
+from ingestion.models import Item, RegistryEntry, RegistryRelease, Source
+from ingestion.service import fetch_entries, ingest_source
 from ingestion.transport import FetchError, Response
 
 
@@ -72,6 +72,82 @@ class MarineTests(TestCase):
         self.http.get.side_effect = [Response(200, b"[]", {}, URL)]
         with self.assertRaises(FetchError):
             fetch_entries(self.source, self.http)
+
+    def test_missing_metadata_names_product_and_fields_without_remote_values(self):
+        for fields in (("properties",), ("title",), ("license",), ("title", "license")):
+            product = {**self.product, "description": "PRIVATE_REMOTE_TEXT"}
+            for field in fields:
+                product.pop(field)
+            self.http.get.side_effect = self.replies(product=product)
+            with self.subTest(fields=fields):
+                with self.assertRaises(FetchError) as caught:
+                    fetch_entries(self.source, self.http)
+                self.assertEqual(
+                    str(caught.exception),
+                    f"Marine product metadata missing ({', '.join(fields)}): PRODUCT_1",
+                )
+                self.assertEqual(caught.exception.status, 200)
+                self.assertEqual(caught.exception.url, product_url("PRODUCT_1/product.stac.json"))
+                self.assertNotIn("PRIVATE_REMOTE_TEXT", str(caught.exception))
+
+    def test_empty_metadata_and_wrong_properties_type_still_fail_closed(self):
+        for values, field in (
+            ({"title": ""}, "title"),
+            ({"license": ""}, "license"),
+            ({"properties": None}, "properties"),
+            ({"properties": []}, "properties"),
+        ):
+            self.http.get.side_effect = self.replies(product={**self.product, **values})
+            with self.subTest(values=values):
+                with self.assertRaises(FetchError) as caught:
+                    fetch_entries(self.source, self.http)
+                self.assertEqual(
+                    str(caught.exception), f"Marine product metadata missing ({field}): PRODUCT_1"
+                )
+
+    def test_incomplete_product_aborts_batch_preserving_existing_items(self):
+        release = RegistryRelease.objects.create(filename="fixture", sha256="8" * 64, sheets={})
+        self.source.registry = RegistryEntry.objects.create(
+            registry_id=195, release=release, master={}, technical={}
+        )
+        self.source.slug = "registry-195"
+        self.source.enabled = self.source.activation_approved = True
+        self.source.save()
+        Item.objects.create(
+            source=self.source,
+            external_id="older",
+            title="Existing product",
+            url=URL,
+            content_hash="a" * 64,
+            metadata={"product_id": "OLDER_PRODUCT"},
+        )
+        before = list(self.source.items.values())
+        root = {
+            "type": "Catalog",
+            "id": "MDS",
+            "links": [
+                {"rel": "child", "href": f"PRODUCT_{i}/product.stac.json"} for i in (1, 2, 3)
+            ],
+        }
+        incomplete = {
+            "type": "Collection",
+            "id": "PRODUCT_2",
+            "properties": {"admp_updated": "2026-10-05"},
+        }
+        self.http.get.side_effect = [
+            Response(200, json.dumps(root).encode(), {}, URL),
+            self.replies()[1],
+            Response(
+                200, json.dumps(incomplete).encode(), {}, product_url("PRODUCT_2/product.stac.json")
+            ),
+        ]
+        run = ingest_source(self.source, self.http)
+        self.assertEqual(run.status, "failed")
+        self.assertEqual(run.http_status, 200)
+        self.assertEqual(run.error, "Marine product metadata missing (title, license): PRODUCT_2")
+        self.assertEqual((run.created, run.updated, run.unchanged), (0, 0, 0))
+        self.assertEqual(list(self.source.items.values()), before)
+        self.assertEqual(self.http.get.call_count, 3)
 
     def test_duplicate_empty_paged_and_external_children_rejected_before_fetch(self):
         child = {"rel": "child", "href": "PRODUCT_1/product.stac.json"}

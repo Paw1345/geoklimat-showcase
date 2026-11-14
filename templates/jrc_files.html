@@ -1,0 +1,18 @@
+{% extends "registry_base.html" %}{% block title %}Pliki zbioru JRC — GeoKlimat{% endblock %}{% block content %}
+<h1>Pliki zbioru JRC</h1>
+<p><a href="{% url 'item_history' item.pk %}">{{ item.title }}</a> · <a href="{{ item.url }}" rel="noopener noreferrer">strona zbioru w katalogu JRC</a></p>
+<p>Lista z katalogu JRC odczytana teraz, jednym zapytaniem. Pobrać można pojedynczy plik na licencji CC BY 4.0, do 50 MiB, z zatwierdzonego hosta; pobieranie idzie w tle i liczy się do wspólnego limitu 15 GB. Nic nie jest pobierane automatycznie.</p>
+{% if error %}<p><strong>Nie udało się odczytać listy plików:</strong> {{ error }}</p>{% endif %}
+{% for file in files %}<article>
+<h2>{{ file.title|default:"Dystrybucja bez tytułu" }}</h2>
+<dl>
+<dt>Adres pliku</dt><dd>{{ file.file_url|default:"brak" }}</dd>
+{% if file.access_urls %}<dt>Strona dostępu</dt><dd>{% for url in file.access_urls %}<a href="{{ url }}" rel="noopener noreferrer">{{ url }}</a> {% endfor %}</dd>{% endif %}
+<dt>Licencja</dt><dd>{{ file.licence|default:"niepodana" }}</dd>
+<dt>Format</dt><dd>{{ file.format|default:"niepodany" }}</dd>
+<dt>Rozmiar wg katalogu</dt><dd>{% if file.size_bytes is not None %}{{ file.size_bytes|filesizeformat }}{% else %}niepodany (limit sprawdzany przy pobraniu){% endif %}</dd>
+</dl>
+{% if file.eligible %}<form method="post" action="{% url 'jrc_file_request' item.pk forloop.counter0 %}">{% csrf_token %}<button>Pobierz ten plik w tle</button></form>
+{% else %}<p>Nie do pobrania tutaj: {{ file.reasons|join:"; " }}.</p>{% endif %}
+</article>{% empty %}{% if not error %}<p>Katalog nie podaje plików dla tego zbioru.</p>{% endif %}{% endfor %}
+{% endblock %}

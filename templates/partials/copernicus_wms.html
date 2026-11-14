@@ -1,0 +1,25 @@
+<section aria-labelledby="wms-heading">
+<h2 id="wms-heading">Copernicus — katalog warstw WMS</h2>
+<p>Źródło: {{ item.source.organization }}. Wersja WMS: {{ item.metadata.version }}.</p>
+<p>Opis usługi i warstw, ich zakresy czasu oraz odnośniki do map. Mapy i wartości wskaźników nie zostały pobrane.</p>
+{% if item.metadata.layer_name %}
+<dl>
+<dt>Nazwa warstwy w usłudze</dt><dd>{{ item.metadata.layer_name }}</dd>
+<dt>Pierwsza / ostatnia wartość czasu podana przez WMS</dt>
+<dd>{{ item.metadata.time_first|default:"Nie podano" }} / {{ item.metadata.time_last|default:"Nie podano" }}</dd>
+<dt>Domyślna wartość czasu w usłudze</dt><dd>{{ item.metadata.time_default|default:"Nie podano" }}</dd>
+</dl>
+<p>Zakres czasu opisuje warstwę dostawcy. Nie oznacza daty publikacji, kompletnej lokalnej historii ani aktualnego zagrożenia w Polsce.</p>
+{% if item.metadata.preview_url %}
+<p><a href="{{ item.metadata.preview_url }}" rel="noopener noreferrer">Otwórz mapę dostawcy dla obszaru Polski</a> (otwarcie pobierze obraz z serwera dostawcy).</p>
+{% else %}
+<p>Brak odnośnika do mapy dla Polski — warstwa nie deklaruje EPSG:4326.</p>
+{% endif %}
+{% else %}
+<p>Opis usługi. Liczba elementów warstw podana w odczytanej odpowiedzi WMS: {{ item.metadata.layers_count }} (obejmuje grupy).</p>
+{% endif %}
+<p><a href="{{ item.metadata.evidence_url }}" rel="noopener noreferrer">Dokumentacja usługi</a> ·
+<a href="{{ item.metadata.terms_url }}" rel="noopener noreferrer">Warunki wykorzystania</a>.</p>
+<dl><dt>Opłaty podane przez usługę</dt><dd>{{ item.metadata.fees_raw|default:"Nie podano" }}</dd>
+<dt>Ograniczenia dostępu podane przez usługę</dt><dd>{{ item.metadata.access_constraints_raw|default:"Nie podano" }}</dd></dl>
+</section>

@@ -1,4 +1,4 @@
-{% extends "registry_base.html" %}{% block content %}
+{% extends "registry_base.html" %}{% block title %}Dane pomiarowe, GIS i satelitarne — GeoKlimat{% endblock %}{% block content %}
 <h1>Dane pomiarowe, GIS i satelitarne</h1>
 {% if user.is_staff %}<p><a href="{% url 'stac_coverage' %}">STAC Polska/UE — zakres dat, postęp i dostępność kopii</a></p>{% endif %}
 {% if user.is_staff %}<p><a href="{% url 'data_storage' %}">Pojemność i retencja cache — rzeczywiste bajty, wygasłe kopie i fragmenty plików</a></p>{% endif %}

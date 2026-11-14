@@ -7,7 +7,7 @@ from ingestion.transport import Client, FetchError
 
 
 class Command(BaseCommand):
-    help = "One GUGiK/GIOS/INSPIRE excerpt; GET preview by default, --apply saves a revision."
+    help = "One GUGiK/GIOS/MKiS/INSPIRE excerpt; GET preview by default, --apply saves a revision."
 
     def add_arguments(self, parser):
         parser.add_argument("item", type=int)

@@ -1,0 +1,90 @@
+{% extends "registry_base.html" %}
+{% block title %}Natura 2000 — raport lokalnej kopii · GeoKlimat{% endblock %}
+{% block content %}
+<h1>Natura 2000 — {% if summary %}raport kopii nr {{ selected.id }}{% else %}wybór kopii{% endif %}</h1>
+{% if not summary and not error %}
+<p><strong>Tylko metadane.</strong> Zawartość CSV i integralność pliku nie zostały sprawdzone na tej stronie.
+Raport obliczysz przyciskiem wybranej kopii poniżej. Samo otwarcie listy nie uruchamia obliczeń ani pobierania.</p>
+{% endif %}
+<p>Historyczne wydanie <strong>end2021 rev1</strong>, status katalogowy <strong>Superseded</strong>:
+obszary UE (w tym Polski), stan na koniec 2021 r., nie aktualny rejestr.
+To nie granice obszarów, pełny wykaz siedlisk/gatunków ani potwierdzenie kompletności krajowej.</p>
+{% if error %}
+<p role="alert">{{ error }}</p>
+<p><a href="{% url 'data_catalog' %}">Wróć do katalogu danych</a></p>
+{% else %}
+<p><a href="{% url 'data_detail' channel.id %}">Wróć do kanału</a>{% if selected %} ·
+<a href="{% url 'natura_report' channel.id %}">Lista dostępnych kopii</a>{% endif %}</p>
+<section aria-labelledby="natura-source">
+<h2 id="natura-source">{{ channel.name }}</h2>
+<p class="funding-attribution">{{ channel.attribution }}</p>
+<p>Źródło: EEA / DG ENV · <a href="{{ source_url }}">Rekord katalogu EEA</a> ·
+<a href="{{ file_url }}">Oryginalny CSV u dostawcy</a> ·
+<a href="{{ license_url }}">Licencja CC BY 4.0</a>.</p>
+<p>Daty poniżej dotyczą lokalnej kopii. Ważność przechowywania nie oznacza aktualności danych z 2021 r.
+Czas utworzenia zlecenia nie jest datą zakończenia transferu.</p>
+</section>
+{% if selected %}
+<section aria-labelledby="natura-copy">
+<h2 id="natura-copy">Metadane kopii nr {{ selected.id }}</h2>
+<dl>
+<dt>Utworzenie zlecenia</dt><dd>{{ selected.created_at|date:"c" }}</dd>
+<dt>Ważność lokalnej kopii</dt><dd>{{ selected.expires_at|date:"c" }}</dd>
+<dt>Zweryfikowany rozmiar pliku (bajty)</dt><dd>{{ summary.source_bytes }}</dd>
+<dt>Zweryfikowany SHA-256 pliku</dt><dd class="checksum"><code>{{ summary.source_sha256 }}</code></dd>
+</dl>
+</section>
+{% if summary %}
+<section aria-labelledby="natura-result">
+<h2 id="natura-result">Wynik pełnego odczytu lokalnej kopii</h2>
+<p><strong>Struktura: PASS</strong> · <strong>Jakość: {{ summary.quality_status|upper }}</strong>.</p>
+<p>PASS oznacza poprawny pełny odczyt, SHA-256 i strukturę tej kopii, nie kompletność krajową ani aktualność rejestru.
+Raport nie monitoruje późniejszych zmian zawartości. WARN wskazuje puste pola lub anomalie; niczego nie poprawiamy automatycznie.</p>
+<dl>
+<dt>Rekordy obszarów UE</dt><dd>{{ summary.records }}</dd>
+<dt>Unikalne identyfikatory SITECODE</dt><dd>{{ summary.unique_sitecodes }}</dd>
+<dt>Obszary Polski (PL)</dt><dd>{{ summary.poland_records }}</dd>
+<dt>Kolumny CSV</dt><dd>{{ summary.fields|join:", " }}</dd>
+<dt>Najdłuższe pole (znaki)</dt><dd>{{ summary.max_field_chars }}</dd>
+<dt>Licencja</dt><dd>{{ summary.license }}</dd>
+</dl>
+</section>
+<section aria-labelledby="natura-countries"><h2 id="natura-countries">Kraje: kody pochodne i surowe</h2>
+<h3>Kody zapisane wielkimi literami</h3><dl>{% for code,count in summary.country_counts.items %}<dt>{{ code }}</dt><dd>{{ count }}</dd>{% endfor %}</dl>
+<h3>Kody źródłowe bez zmiany wielkości liter</h3><dl>{% for code,count in summary.country_counts_raw.items %}<dt>{{ code }}</dt><dd>{{ count }}</dd>{% endfor %}</dl>
+<h3>Surowe typy obszarów SITETYPE</h3><dl>{% for code,count in summary.type_counts_raw.items %}<dt class="funding-attribution">{{ code|truncatechars:201|default:"Pusty typ" }}</dt><dd>{{ count }}</dd>{% endfor %}</dl>
+</section>
+<section aria-labelledby="natura-dates"><h2 id="natura-dates">Zakresy źródłowych dat</h2>
+<p>Źródło opisuje precyzję rok/miesiąc; zachowujemy surowe daty CSV i nie dopisujemy godzin.
+Daty po 2021 r. nie zmieniają oznaczenia historycznego wydania. „early_date_unconfirmed” to heurystyka dla dat przed 1950 r., nie potwierdzenie błędu.</p>
+<dl>{% for field,span in summary.date_ranges.items %}<dt class="funding-attribution">{{ field }}</dt><dd>{{ span.min_raw }} — {{ span.max_raw }};
+poprawnych dat: {{ span.count }}, po końcu 2021 r.: {{ span.after_release }}.</dd>{% empty %}<dt>Zakresy</dt><dd>Brak poprawnych dat.</dd>{% endfor %}</dl>
+</section>
+<section aria-labelledby="natura-quality"><h2 id="natura-quality">Puste pola i flagi jakości</h2>
+<p>Puste wartości nie są zerami. Flagi współrzędnych i wartości liczbowych nie potwierdzają geometrii granic; nie sumujemy powierzchni.
+Duże etykiety surowych typów są skracane znakiem „…”; źródłowa kopia nie jest zmieniana.</p>
+<h3>Puste pola — liczba rekordów</h3><dl>{% for field,count in summary.blank_counts.items %}<dt class="funding-attribution">{{ field }}</dt><dd>{{ count }}</dd>{% empty %}<dt>Puste pola</dt><dd>Nie wykryto.</dd>{% endfor %}</dl>
+<h3>Flagi źródłowe — liczba wystąpień</h3><dl>{% for flag,count in summary.quality_counts.items %}<dt class="funding-attribution">{{ flag }}</dt><dd>{{ count }}</dd>{% empty %}<dt>Flagi</dt><dd>Nie wykryto anomalii wartości.</dd>{% endfor %}</dl>
+<h3>Przykłady anomalii — do 10, do 200 znaków wartości</h3>
+<ol>{% for example in summary.quality_examples %}<li><dl><dt>SITECODE / pole</dt><dd>{{ example.sitecode }} / {{ example.field }}</dd>
+<dt>Surowa wartość</dt><dd class="mwp-value"><code>{{ example.raw }}</code>{% if example.raw_truncated %} [wartość skrócona do 200 znaków]{% endif %}</dd></dl></li>
+{% empty %}<li>Brak przykładów anomalii liczbowych i dat; puste pola oraz wielkość liter kodów są raportowane osobno.</li>{% endfor %}</ol>
+</section>
+{% endif %}
+{% else %}
+<section aria-labelledby="natura-copies">
+<h2 id="natura-copies">Dostępne kopie — maksymalnie 10</h2>
+<p>Pokazujemy niewygasłe zlecenia oznaczone jako kompletne, zgodne z zatwierdzonym profilem,
+od najnowszego. Ten status nie zastępuje świeżej weryfikacji pliku.</p>
+<ol>
+{% for copy in copies %}
+<li><form method="get" action="{% url 'natura_report' channel.id %}"><button type="submit" name="job" value="{{ copy.id }}">Oblicz raport kopii nr {{ copy.id }}</button></form>
+<p>Utworzenie zlecenia: {{ copy.created_at|date:"c" }} · ważność kopii: {{ copy.expires_at|date:"c" }}.</p></li>
+{% empty %}
+<li role="status">Brak ważnych kompletnych kopii. Nie zlecamy nowego pobrania automatycznie.</li>
+{% endfor %}
+</ol>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -11,7 +14,14 @@ class Command(BaseCommand):
     help = "Import all six sheets, preserving runtime channels and audit state. Default dry-run."
 
     def add_arguments(self, parser):
-        parser.add_argument("path", help="Path to a registry workbook supplied by the operator")
+        parser.add_argument(
+            "path",
+            nargs="?",
+            default=str(
+                Path(settings.BASE_DIR)
+                / "data/GeoKlimat_EPIC0_Master_Source_Registry_VERIFIED.xlsx"
+            ),
+        )
         parser.add_argument("--apply", action="store_true")
 
     def handle(self, *args, **options):

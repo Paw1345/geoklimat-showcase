@@ -1,6 +1,15 @@
 """Static hosts reviewed from the supplied 2026-09-18 workbook; imports cannot extend it."""
 
 HOSTS = [
+    # EFFIS WMS GetCapabilities read from the user's PC 2026-10-08 (HTTP 200 text/xml, robots
+    # passed, Fees none); only the reviewed capabilities URL in copernicus_wms is requested.
+    "maps.effis.emergency.copernicus.eu",
+    # EEA Datahub public datastore; robots "Allow: /", no login, reviewed 2026-10-08.
+    # Only the reviewed K5 file (eea_natura_file.URL) is requested.
+    "sdi.eea.europa.eu",
+    # Natural Earth v5.1.2 pinned GeoJSON for the EU27 mask only; public domain,
+    # robots 404 (allowed), reviewed 2026-10-07. Only NE_URL is requested.
+    "raw.githubusercontent.com",
     # Official ECMWF datasets/how-to-api links ECDS; public metadata/robots reviewed2026-10-04.
     "ecds.ecmwf.int",
     # Official CEMS documented public activation API; HTTPS/robots verified2026-10-04.
@@ -53,6 +62,9 @@ HOSTS = [
     "dane.gov.pl",
     "data.europa.eu",
     "data.jrc.ec.europa.eu",
+    # JRC open data platform file host for catalogue distributions; only single CC BY files
+    # on staff demand (jrc_files, user card 2026-10-08). Robots checked at download time.
+    "jeodpp.jrc.ec.europa.eu",
     "dataspace.copernicus.eu",
     "documentation.dataspace.copernicus.eu",
     "dpn.gov.pl",

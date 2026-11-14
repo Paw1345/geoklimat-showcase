@@ -1,9 +1,9 @@
-{% extends "registry_base.html" %}{% block content %}
+{% extends "registry_base.html" %}{% block title %}Wyszukiwarka informacji — GeoKlimat{% endblock %}{% block content %}
 <h1>Wyszukiwarka informacji</h1>
 <p>Tytuły i dostępne opisy wszystkich pobranych publikacji, aktów prawnych i metadanych zbiorów. Nie przeszukujemy treści niepobranych dokumentów ani plików pomiarowych.</p>
 <p>Wpisz słowa, „dokładną frazę” w prostych cudzysłowach (" "), OR lub -wykluczenie. Zachowaj polskie znaki i formę słowa; brak wyszukiwania odmian i literówek. Puste zapytanie pokazuje wszystkie publikacje.</p>
 <form method="get">{{ form.as_p }}<button type="submit">Szukaj</button> <a href="{% url 'search' %}">Wyczyść filtry</a></form>
-{% if form.record_scope.value == 'publications' %}<p>Pomijamy wyłącznie rozpoznane metadane katalogów danych i usług. Nieznany lub brakujący typ pozostaje widoczny. To filtr technicznego typu rekordu, nie ocena trafności ani samych zmian prawnych; metadane publikacji Cellar i akty prawne nadal mogą wystąpić.</p>{% elif form.record_scope.value == 'catalogues' %}<p>Rozpoznane metadane zbiorów, stacji i usług. Surowe pomiary i pliki są w <a href="/data/">Pomiary i GIS</a>. Nie usunięto rekordów ani nie zmieniono ich ocen.</p>{% endif %}
+{% if form.record_scope.value == 'publications' or not form.record_scope.value %}<p>Pomijamy wyłącznie rozpoznane metadane katalogów danych i usług. Nieznany lub brakujący typ pozostaje widoczny. To filtr technicznego typu rekordu, nie ocena trafności ani samych zmian prawnych; metadane publikacji Cellar i akty prawne nadal mogą wystąpić.</p>{% elif form.record_scope.value == 'catalogues' %}<p>Rozpoznane metadane zbiorów, stacji i usług. Surowe pomiary i pliki są w <a href="/data/">Pomiary i GIS</a>. Nie usunięto rekordów ani nie zmieniono ich ocen.</p>{% endif %}
 <p role="status">{{ items.paginator.count }} pasujących grup publikacji. Filtry dat dotyczą daty publikacji — pomijają wpisy bez daty.</p>
 {% for item in items %}<article>
 <small>{{ item.source.organization }} · {{ item.source.language|upper }}</small>

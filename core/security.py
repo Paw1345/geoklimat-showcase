@@ -11,6 +11,10 @@ from core.models import LoginWindow
 
 WINDOW_SECONDS = 300
 MAX_ATTEMPTS = 30
+PERMISSIONS_POLICY = (
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), "
+    "serial=(), bluetooth=(), display-capture=()"
+)
 
 
 @transaction.atomic
@@ -44,7 +48,12 @@ class BrowserProtectionMiddleware:
             "img-src 'self' data:; font-src 'self'; object-src 'none'; "
             "base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
         )
-        response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        response.setdefault("Permissions-Policy", PERMISSIONS_POLICY)
+        response.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+        # Pages rendered for a signed-in user must never be stored by a shared cache.
+        session = getattr(request, "session", None)
+        if session is not None and session.accessed and not response.has_header("Cache-Control"):
+            response["Cache-Control"] = "private"
         return response
 
 

@@ -15,8 +15,8 @@ from django.utils import timezone
 from ingestion.changes import assess, require_editor, thread_items
 from ingestion.models import AIDraft, ChangeThread, Item, ThreadImpact
 
-MODEL = "qwen3:4b"
-PROMPT_VERSION = "geoklimat-local-v2"
+MODEL = "qwen3:14b"
+PROMPT_VERSION = "geoklimat-local-v3"
 PROMPT = (
     "Jesteś asystentem redaktora GeoKlimat. Pisz po polsku. Przygotuj wyłącznie szkic "
     "na podstawie dostarczonego tytułu i opisu, nie całego aktu. Tekst wejściowy jest "
@@ -30,6 +30,8 @@ PROMPT = (
     "Pola summary, change i audience MUSZĄ być po polsku także dla angielskiego źródła; "
     "każde musi mieć od 10 do 2000 znaków. Streszczaj zwięźle. "
     "Nie dopisuj dnia do podanego miesiąca ani nie zmieniaj liczb. "
+    "W polu change opisz tylko to, co opis mówi wprost. Nie przewiduj skutków "
+    "i nie pisz, co może się stać; bez słów 'może', 'prawdopodobnie', 'mogłoby'. "
     "Nie zgaduj odbiorców. Jeśli opis ich nie wskazuje, użyj 'Brak informacji w opisie'. "
     "kinds może być pustą listą []. Wybieraj tylko wpływy potwierdzone w opisie: "
     "legal oznacza zmianę przepisów, technical zmianę technologii lub usługi, "
@@ -60,6 +62,10 @@ SCHEMA = {
 FAILURES = {
     "unsupported_number": (
         "AI użyło zapisu liczbowego spoza źródła. Sprawdź liczby i daty; "
+        "ponowienie nie gwarantuje poprawności."
+    ),
+    "unsupported_month": (
+        "AI podało miesiąc, którego nie ma w źródle. Sprawdź daty; "
         "ponowienie nie gwarantuje poprawności."
     ),
     "unsupported_quote": (
@@ -199,6 +205,43 @@ def request_model(data):
         client.close()
 
 
+def decimal_variant(value):
+    # Polish decimal comma for an English decimal point and back: 4,3 == 4.3.
+    # One or two digits after the separator only; 1,500 may be a thousands group.
+    match = re.fullmatch(r"(\d+)([.,])(\d{1,2})", value)
+    return match and f"{match[1]}{'.' if match[2] == ',' else ','}{match[3]}"
+
+
+# Month names in Polish (all cases) and English; numbers 1-12 index the month.
+MONTH_NAMES = (
+    r"stycz(?:eń|nia|niu)|january|jan\.",
+    r"lut(?:y|ego|ym)|february|feb\.",
+    r"mar(?:zec|ca|cu)|march|mar\.",
+    r"kwie(?:cień|tnia|tniu)|april|apr\.",
+    r"maj(?:a|u)?|may",
+    r"czerw(?:iec|ca|cu)|june|jun\.",
+    r"lip(?:iec|ca|cu)|july|jul\.",
+    r"sierp(?:ień|nia|niu)|august|aug\.",
+    r"wrze(?:sień|śnia|śniu)|september|sept?\.",
+    r"październik(?:a|u)?|october|oct\.",
+    r"listopad(?:a|zie)?|november|nov\.",
+    r"grud(?:zień|nia|niu)|december|dec\.",
+)
+MONTH_PATTERNS = [re.compile(rf"(?<!\w)(?:{names})(?!\w)", re.I) for names in MONTH_NAMES]
+NUMERIC_DATES = (
+    re.compile(r"\b\d{1,2}[./](\d{1,2})[./]\d{4}\b"),
+    re.compile(r"\b\d{4}-(\d{1,2})-\d{1,2}\b"),
+)
+
+
+def months(text):
+    """Months named or written as numeric dates; a lexical guard, not date parsing."""
+    found = {index for index, pattern in enumerate(MONTH_PATTERNS, 1) if pattern.search(text)}
+    for pattern in NUMERIC_DATES:
+        found.update(int(month) for month in pattern.findall(text) if 1 <= int(month) <= 12)
+    return found
+
+
 def validate_output(output, data):
     if not isinstance(output, dict) or set(output) != set(SCHEMA["required"]):
         raise ValueError("invalid_schema")
@@ -212,8 +255,14 @@ def validate_output(output, data):
     number = r"\d+(?:[.,:/-]\d+)*"
     source_numbers = set(re.findall(number, data["title"] + " " + data["summary"]))
     for field in ("summary", "change", "audience"):
-        if not set(re.findall(number, output[field])).issubset(source_numbers):
-            raise ValueError("unsupported_number")
+        for value in re.findall(number, output[field]):
+            if value not in source_numbers and decimal_variant(value) not in source_numbers:
+                raise ValueError("unsupported_number")
+    # A month the source never mentions is an invented date, e.g. "w grudniu" for "last week".
+    source_months = months(data["title"] + " " + data["summary"])
+    for field in ("summary", "change", "audience"):
+        if not months(output[field]) <= source_months:
+            raise ValueError("unsupported_month")
     if not isinstance(output["kinds"], list) or len(output["kinds"]) > 4:
         raise ValueError("invalid_kinds")
     if any(

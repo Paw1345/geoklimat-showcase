@@ -130,13 +130,22 @@ def ready(request):
     return JsonResponse({"status": "ok"})
 
 
+REGISTRY_FILTER_LABELS = {
+    "priority": "Priorytet",
+    "country": "Obszar",
+    "level": "Poziom",
+    "technical_status": "Status z pliku",
+    "integration_state": "Stan integracji",
+}
+
+
 @require_GET
 def registry(request):
     entries = RegistryEntry.objects.prefetch_related("sources").all()
     query = request.GET.get("q", "").strip()[:200]
     if query:
         entries = entries.filter(Q(organization__icontains=query) | Q(name__icontains=query))
-    for field in ("priority", "country", "level", "technical_status", "integration_state"):
+    for field in REGISTRY_FILTER_LABELS:
         value = request.GET.get(field)
         if value:
             entries = entries.filter(**{field: value})
@@ -150,18 +159,13 @@ def registry(request):
             "filters": [
                 {
                     "name": field,
+                    "label": REGISTRY_FILTER_LABELS[field],
                     "selected": request.GET.get(field, ""),
                     "values": RegistryEntry.objects.order_by(field)
                     .values_list(field, flat=True)
                     .distinct(),
                 }
-                for field in (
-                    "priority",
-                    "country",
-                    "level",
-                    "technical_status",
-                    "integration_state",
-                )
+                for field in REGISTRY_FILTER_LABELS
             ],
             "params": params.urlencode(),
             "total": RegistryEntry.objects.count(),

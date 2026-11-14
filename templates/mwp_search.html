@@ -1,0 +1,41 @@
+{% extends "registry_base.html" %}
+{% block title %}MWP — wyszukiwanie · GeoKlimat{% endblock %}
+{% block content %}
+<h1>MWP — wyszukiwanie lokalnej tabeli</h1>
+<p>{{ channel.name }}</p>
+<p><a href="{% url 'data_detail' channel.pk %}">Szczegół kanału i kopie</a> · <a href="{% url 'registry_detail' channel.registry.registry_id %}">Rejestr źródła</a> · <a href="{{ channel.url }}">Usługa dostawcy</a></p>
+<p>Jedna zachowana kopia okna publikowanego przez dostawcę, nie pełne archiwum ani spis przestrzenny punktów. Data źródłowa oznacza pomiar lub pobór, nie datę pobrania kopii.</p>
+<form method="get" class="crfop-form">
+{{ form.non_field_errors }}
+{% for field in form.visible_fields %}<p>{{ field.label_tag }}<br>{{ field }} {{ field.errors }}</p>{% endfor %}
+{{ form.snapshot }}{% if form.indicator.is_hidden %}{{ form.indicator }} {{ form.indicator.errors }}{% endif %}
+{% if form.page.errors %}<p role="alert">{{ form.page.errors }}</p>{% endif %}
+{% if form.snapshot.errors %}<p role="alert">{{ form.snapshot.errors }}</p>{% endif %}
+<p>Wszystkie filtry muszą pasować. Fragment nazwy wskaźnika bez rozróżniania wielkości liter; daty YYYY-MM-DD, granice włączne. Zmiana filtrów wraca do strony 1 tej samej kopii.</p>
+<button type="submit">Filtruj</button> <a href="{{ request.path }}">Wybierz najnowszą kopię i wyczyść filtry</a>
+</form>
+{% if error %}<p role="alert">{{ error }}</p>
+{% elif copy %}
+<section aria-labelledby="copy-heading">
+<h2 id="copy-heading">Wybrana kopia #{{ copy.snapshot.pk }}</h2>
+<p>{{ channel.attribution }}</p>
+<p>{{ copy.data.scope_note }} Okres całej kopii: {{ copy.summary.period_start }} – {{ copy.summary.period_end }}. Rekordy: {{ copy.summary.records }}; punkty: {{ copy.summary.stations }}.</p>
+<p>Pobrano {{ copy.snapshot.fetched_at }}; ważna do {{ copy.expires_at }}. Retencja 30 dni od pobrania, nie od dat pomiarów. Kolejne strony korzystają z tej samej kopii.</p>
+<p>Wartości w notacji JSON: null oznacza brak, nie zero. Cudzysłowy ujawniają tekst i jego spacje. {% if copy.data.table == "pomiary" %}Jednostki pomiarów: GLEBOKOSC_ZWIERCIADLA — m p.p.t., WYDAJNOSC — l/s.{% else %}Jednostka w JEDNOSTKA, kwalifikator LOQ w ZNAK. Pusta jednostka nie oznacza wielkości bezwymiarowej.{% endif %} Bez konwersji, oceny przekroczeń lub interpretowania LOQ.</p>
+<p>Dopasowania: {{ page.paginator.count }}. Strona {{ page.number }} z {{ page.paginator.num_pages }} (do 50 wierszy i 100 tys. znaków komórek, bez ucinania).</p>
+<p>SHA-256: <code class="checksum">{{ copy.snapshot.sha256 }}</code></p>
+<p><a href="{% url 'data_download' copy.snapshot.pk %}">Pobierz całą kopię JSON</a> — nie tylko filtrowane wyniki. <a href="{{ links.current }}">Link do tego wyboru kopii i filtrów</a></p>
+</section>
+{% if page.paginator.count %}
+<div class="scroll" role="region" aria-label="Tabela MWP, przewijana poziomo" tabindex="0">
+<table class="mwp-table"><caption>Oryginalne pola MWP — strona {{ page.number }}, kolejność OBJECTID. Przewijaj poziomo, aby zobaczyć wszystkie kolumny.</caption>
+<thead><tr>{% for column in copy.data.columns %}<th scope="col">{{ column }}</th>{% endfor %}</tr></thead>
+<tbody>{% for row in page %}<tr>{% for value in row %}<td><code class="mwp-value">{{ value }}</code></td>{% endfor %}</tr>{% endfor %}</tbody>
+</table></div>
+{% else %}<p role="status">Brak dopasowań do wybranych filtrów w tej kopii.</p>{% endif %}
+<nav aria-label="Strony wyników MWP">
+{% if links.previous %}<a href="{{ links.previous }}" rel="prev">Poprzednia strona</a>{% endif %}
+{% if links.next %}<a href="{{ links.next }}" rel="next">Następna strona</a>{% endif %}
+</nav>
+{% elif not form.errors %}<p role="status">Brak aktualnej kopii. Nie oznacza to pustej tabeli u dostawcy.</p>{% endif %}
+{% endblock %}

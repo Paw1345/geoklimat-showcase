@@ -1,0 +1,48 @@
+{% extends "registry_base.html" %}
+{% block title %}Nabory UE — lokalne wyszukiwanie · GeoKlimat{% endblock %}
+{% block content %}
+<h1>Nabory UE — wyszukiwanie lokalnej kopii</h1>
+<p>{{ channel.name }}</p>
+<p><a href="{% url 'data_detail' channel.pk %}">Szczegół kanału i kopie</a> · <a href="{% url 'registry_detail' channel.registry.registry_id %}">Rejestr źródła</a></p>
+<p>Stany wyliczone w chwili pobrania, nie przeliczane na dzisiaj. „Otwarte” nie potwierdza aktualnej dostępności. Późniejszy termin może dotyczyć kolejnego etapu; uprawnienie nowych wnioskodawców niesprawdzone. Sprawdź oryginalny temat i warunki w portalu.</p>
+<form method="get" class="crfop-form">
+{{ form.non_field_errors }}
+{% for field in form.visible_fields %}<p>{{ field.label_tag }}<br>{{ field }} {{ field.errors }}</p>{% endfor %}
+{{ form.snapshot }}
+{% if form.page.errors %}<p role="alert">{{ form.page.errors }}</p>{% endif %}
+{% if form.snapshot.errors %}<p role="alert">{{ form.snapshot.errors }}</p>{% endif %}
+<p>Wszystkie filtry muszą pasować. Fragmenty bez rozróżniania wielkości liter. Zmiana filtrów wraca do strony 1 tej samej kopii.</p>
+<button type="submit">Filtruj</button> <a href="{{ request.path }}">Wybierz najnowszą kopię i wyczyść filtry</a>
+</form>
+{% if error %}<p role="alert">{{ error }}</p>
+{% elif copy %}
+<section aria-labelledby="copy-heading">
+<h2 id="copy-heading">Wybrana kopia #{{ copy.snapshot.pk }}</h2>
+<p class="funding-attribution">{{ copy.data.attribution }}</p>
+<p>Stan na {{ copy.summary.as_of }}. Pobrano {{ copy.snapshot.fetched_at }}; ważna do {{ copy.expires_at }}. Retencja 30 dni to wiek kopii, nie terminów. Zakres źródłowy: {{ copy.data.scope }}.</p>
+{% if copy.summary.completeness == "converged_passes" %}<p><strong>Zbieżność przebiegów nie jest dowodem kompletności katalogu.</strong> Przebiegi: {{ copy.summary.scan_passes }}. Niestabilne stronicowanie może pomijać tematy.</p>
+{% elif copy.summary.completeness == "single_page" %}<p>Jedna strona wyniku ograniczonego zapytania; nie cały katalog naborów UE.</p>
+{% else %}<p><strong>Brak zapisanego dowodu kompletności dla tej historycznej kopii.</strong> Nie wnioskujemy go z liczby rekordów lub partial=false.</p>{% endif %}
+<p>Rekordy całej kopii: {{ copy.summary.records }}. Dopasowania: {{ page.paginator.count }}. Strona {{ page.number }} z {{ page.paginator.num_pages }} (do 50 tematów).</p>
+<p>SHA-256: <code class="checksum">{{ copy.snapshot.sha256 }}</code></p>
+<p><a href="{% url 'data_download' copy.snapshot.pk %}">Pobierz całą kopię JSON</a> — nie tylko filtrowane wyniki. <a href="{{ links.current }}">Link do tej kopii i filtrów</a></p>
+</section>
+{% if page.paginator.count %}
+<div class="scroll" role="region" aria-label="Tabela naborów UE, przewijana poziomo" tabindex="0">
+<table class="funding-table"><caption>Zapisane tematy — strona {{ page.number }}, kolejność identyfikator/referencja. Daty źródłowe ze strefą, bez konwersji.</caption>
+<thead><tr><th scope="col">Temat / referencja</th><th scope="col">Tytuł</th><th scope="col">Zapisany stan</th><th scope="col">Źródłowe daty otwarcia</th><th scope="col">Źródłowe terminy</th><th scope="col">Najbliższy termin przy pobraniu</th><th scope="col">Kody indeksu</th></tr></thead>
+<tbody>{% for row in page %}<tr>
+<td><a href="{{ row.source_url }}" rel="noopener noreferrer">{{ row.identifier }}</a>{% if row.source_reference %}<p>Referencja: {{ row.source_reference }}</p>{% endif %}</td>
+<td>{{ row.title }}</td><td><code>{{ row.state }}</code></td>
+<td>{% for date in row.start_dates_raw %}<p><code>{{ date }}</code></p>{% endfor %}</td>
+<td>{% for date in row.deadline_dates_raw %}<p><code>{{ date }}</code></p>{% endfor %}</td>
+<td>{% if row.next_deadline_raw %}<code>{{ row.next_deadline_raw }}</code>{% else %}brak przyszłego terminu w chwili pobrania{% endif %}</td>
+<td>Status: {{ row.source_status_raw }}; typ: {{ row.source_type_raw }}. Surowe kody, nie ocena dostępności.</td>
+</tr>{% endfor %}</tbody></table></div>
+{% else %}<p role="status">Brak dopasowań do wybranych filtrów w tej kopii.</p>{% endif %}
+<nav aria-label="Strony wyników naborów">
+{% if links.previous %}<a href="{{ links.previous }}" rel="prev">Poprzednia strona</a>{% endif %}
+{% if links.next %}<a href="{{ links.next }}" rel="next">Następna strona</a>{% endif %}
+</nav>
+{% elif not form.errors %}<p role="status">Brak aktualnej kopii. Nie oznacza to braku naborów u dostawcy.</p>{% endif %}
+{% endblock %}

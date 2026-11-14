@@ -8,6 +8,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Come back after a host or Docker restart (PC reboot 2026-10-15 left db/web exited).
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -34,6 +36,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
   worker:
     build:
       context: .
@@ -44,8 +47,20 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-geoklimat}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
       POSTGRES_HOST: db
+      # Optional external ping after each healthy cycle; set it in .env, never in Git.
+      WORKER_HEARTBEAT_URL: ${WORKER_HEARTBEAT_URL:-}
+      # Daily alert digest by e-mail; off unless ALERT_EMAIL_ENABLED=1 and SMTP values are in .env.
+      ALERT_EMAIL_ENABLED: ${ALERT_EMAIL_ENABLED:-}
+      SITE_URL: ${SITE_URL:-}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-geoklimat@localhost}
     command: python manage.py ingestion_worker
     restart: unless-stopped
+    # SIGTERM finishes the current channel/page; also applies to `up -d` recreation.
+    stop_grace_period: 120s
     volumes:
       - .:/app
     depends_on:

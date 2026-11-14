@@ -141,7 +141,7 @@ class SearchTests(TestCase):
         self.assertTrue(search_items({"q": "GUGiK"}).exists())
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT indexdef FROM pg_indexes WHERE indexname = %s", ["item_document_search_gin"]
+                "SELECT indexdef FROM pg_indexes WHERE indexname = %s", ["item_search_document_gin"]
             )
             self.assertIn("USING gin", cursor.fetchone()[0])
 

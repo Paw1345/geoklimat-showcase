@@ -1,4 +1,4 @@
-"""Opt-in GUGiK/GIOS/INSPIRE excerpts; not full-text crawling or AI summaries."""
+"""Opt-in GUGiK/GIOS/MKiS/INSPIRE excerpts; not full-text crawling or AI summaries."""
 
 import hashlib
 import json
@@ -14,7 +14,10 @@ from ingestion.normalization import title_key
 from ingestion.publications import record_version
 from ingestion.transport import FetchError
 
-PROFILES = {"gugik": "gugik-article-v1", "gios": "gios-article-v1"}
+PROFILES = {"gugik": "gugik-article-v1", "gios": "gios-article-v1", "klimat": "mkis-article-v1"}
+# MKiS consultations and the official journal have other page shapes; only the
+# two reviewed news lists share the GUGiK/GIOS article layout.
+SOURCE_PATHS = {"klimat": {"/web/klimat/wiadomosci", "/web/klimat/komunikaty"}}
 INSPIRE_HOST = "knowledge-base.inspire.ec.europa.eu"
 INSPIRE_PROFILE = "inspire-publication-v1"
 INSPIRE_SELECTOR = "main#main-content #description + div .ecl"
@@ -51,6 +54,7 @@ def eligible(item):
         and any(
             source.path.startswith(f"/web/{institution}/")
             and target.path.startswith(f"/web/{institution}/")
+            and source.path.rstrip("/") in SOURCE_PATHS.get(institution, {source.path.rstrip("/")})
             for institution in PROFILES
         )
         and len(target.path.strip("/").split("/")) == 3

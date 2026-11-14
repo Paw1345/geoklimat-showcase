@@ -2,13 +2,14 @@ import hashlib
 import io
 import json
 from unittest.mock import Mock
+from urllib.parse import unquote_plus
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 
-from ingestion.inspire_codes import CONFIG, SCHEMES, SLUG, URL
+from ingestion.inspire_codes import CONFIG, DATA_CONFIG, DATA_SCHEMES, DATA_SLUG, SCHEMES, SLUG, URL
 from ingestion.inspire_vocabularies import CONFIG as PRIMARY_CONFIG
 from ingestion.inspire_vocabularies import SLUG as PRIMARY_SLUG
 from ingestion.models import Item, RegistryEntry, RegistryRelease, Source
@@ -240,3 +241,102 @@ class InspireCodesTests(TestCase):
         response = self.client_web.get("/vocabularies/", {"page": "invalid"})
         self.assertContains(response, "&lt;script&gt;")
         self.assertNotContains(response, "<script>alert(1)</script>")
+
+
+class InspireDataCodesTests(InspireCodesTests):
+    """Second profile: ten code lists tied to collected data, separate source."""
+
+    def setUp(self):
+        super().setUp()
+        self.source = Source(slug=DATA_SLUG, adapter="json", url=URL, config=DATA_CONFIG)
+        self.rows = [
+            {
+                "scheme": binding(s),
+                "concept": binding(s + "/example"),
+                "label": binding("English label", "en"),
+            }
+            for s in sorted(DATA_SCHEMES)
+        ]
+
+    def http_client(self):
+        # One query per list: answer each request with that list's rows only.
+        client = Mock()
+
+        def get(url, headers):
+            asked = unquote_plus(url)
+            rows = [r for r in self.rows if "<" + r["scheme"]["value"] + ">" in asked]
+            body = {
+                "head": {"vars": ["scheme", "concept", "label", "label_pl", "definition"]},
+                "results": {"bindings": rows},
+            }
+            return Response(200, json.dumps(body).encode(), {}, url)
+
+        client.get.side_effect = get
+        return client
+
+    def test_data_profile_reads_ten_lists_without_touching_base_channel(self):
+        client = self.http_client()
+        entries = fetch_entries(self.source, client)[0]
+        self.assertEqual(len(entries), 10)
+        self.assertEqual(client.get.call_count, 10)
+        asked = " ".join(unquote_plus(call.args[0]) for call in client.get.call_args_list)
+        self.assertIn("ZoneTypeCode", asked)
+        self.assertNotIn("SoilInvestigationPurposeValue", asked)
+        for call in client.get.call_args_list:
+            url = unquote_plus(call.args[0])
+            self.assertEqual(sum("<" + uri + ">" in url for uri in DATA_SCHEMES), 1)
+        self.assertEqual(
+            entries[0].metadata["scheme_label"], DATA_SCHEMES[entries[0].metadata["scheme_uri"]]
+        )
+
+    def test_missing_list_named_and_cross_profile_config_refused(self):
+        self.rows = self.rows[1:]
+        with self.assertRaisesMessage(FetchError, "AquiferTypeValue"):
+            fetch_entries(self.source, self.http_client())
+        self.source.config = CONFIG
+        client = self.http_client()
+        with self.assertRaises(FetchError):
+            fetch_entries(self.source, client)
+        client.get.assert_not_called()
+
+    def test_reviewed_empty_list_allowed_other_empty_list_refused(self):
+        purpose = "http://inspire.ec.europa.eu/codelist/PurposeOfCollectionValue"
+        self.rows = [r for r in self.rows if r["scheme"]["value"] != purpose]
+        entries = fetch_entries(self.source, self.http_client())[0]
+        self.assertEqual(len(entries), 9)
+        self.rows = [r for r in self.rows if "ZoneTypeCode" not in r["scheme"]["value"]]
+        with self.assertRaisesMessage(FetchError, "ZoneTypeCode"):
+            fetch_entries(self.source, self.http_client())
+
+    def test_truncated_list_refused(self):
+        self.rows = [
+            {
+                "scheme": self.rows[0]["scheme"],
+                "concept": binding(self.rows[0]["scheme"]["value"] + f"/c{i:04}"),
+                "label": binding("English label", "en"),
+            }
+            for i in range(1001)
+        ] + self.rows[1:]
+        with self.assertRaises(FetchError):
+            fetch_entries(self.source, self.http_client())
+
+    def test_configure_creates_both_disabled_channels(self):
+        call_command("configure_inspire_codes", apply=True, stdout=io.StringIO())
+        data = Source.objects.get(slug=DATA_SLUG)
+        self.assertEqual(
+            (data.config, data.enabled, data.activation_approved), (DATA_CONFIG, False, False)
+        )
+        self.assertTrue(self.registry.sources.filter(pk=data.pk).exists())
+
+    # Base-profile staff UI/export tests rely on eight base schemes.
+    test_contract_one_get_raw_labels_no_dates_stable_identity = None
+    test_missing_polish_and_definition_are_not_invented = None
+    test_order_duplicate_membership_and_language_fail_whole_batch = None
+    test_empty_missing_scheme_and_limit_refused = None
+    test_profile_guard_before_http_and_response_identity = None
+    test_duplicate_json_keys_and_bad_head_refused = None
+    test_configure_dry_apply_repeat_preserves_primary_and_gap = None
+    test_configure_admin_or_other_link_refused = None
+    test_staff_get_ui_filter_and_allowlisted_export = None
+    test_web_filters_exports_no_store_etag_and_no_raw_metadata = None
+    test_html_definition_escaped_and_safe_pagination = None

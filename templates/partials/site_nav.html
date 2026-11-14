@@ -1,0 +1,15 @@
+<a class="skip-link" href="#tresc">Przejdź do treści</a>
+<header class="site-header"><nav class="site-nav" aria-label="Nawigacja główna"><ul>
+<li><a href="/"{% if request.path == "/" %} aria-current="page"{% endif %}>Aktualności</a></li>
+<li><a href="{% url 'search' %}"{% if request.path == "/search/" %} aria-current="page"{% endif %}>Wyszukiwarka</a></li>
+<li><a href="/registry/"{% if request.path == "/registry/" %} aria-current="page"{% endif %}>Rejestr</a></li>
+<li><a href="/data/"{% if request.path == "/data/" %} aria-current="page"{% endif %}>Dane i GIS</a></li>
+{% if user.is_staff %}<li><a href="/collections/"{% if request.path == "/collections/" %} aria-current="page"{% endif %}>Kolekcje i katalogi</a></li>{% endif %}
+<li><a href="{% url 'legal_catalog' %}"{% if request.path == "/legislation/" %} aria-current="page"{% endif %}>Procesy i akty</a></li>
+<li><a href="{% url 'legal_deadlines' %}"{% if request.path == "/deadlines/" %} aria-current="page"{% endif %}>Terminy</a></li>
+<li><a href="/registry/workbook/"{% if request.path == "/registry/workbook/" %} aria-current="page"{% endif %}>Arkusze źródłowe</a></li>
+<li><a href="/changes/"{% if request.path == "/changes/" and not request.GET.watching %} aria-current="page"{% endif %}>Wątki zmian</a></li>
+<li><a href="/changes/?watching=1"{% if request.path == "/changes/" and request.GET.watching %} aria-current="page"{% endif %}>Obserwowane</a></li>
+<li><a href="/alerts/"{% if request.path == "/alerts/" %} aria-current="page"{% endif %}>Alerty</a></li>
+<li>{% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Wyloguj się</button></form>{% elif request.resolver_match.url_name != "login" %}<a href="{% url 'login' %}?next={{ request.path|urlencode }}">Zaloguj się</a>{% endif %}</li>
+</ul></nav></header>

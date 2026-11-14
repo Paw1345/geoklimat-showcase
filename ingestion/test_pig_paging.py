@@ -1,11 +1,13 @@
 import io
 import json
+from datetime import timedelta
 from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlsplit
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from ingestion.data_paging import advance_harvest
 from ingestion.data_service import collect
@@ -172,3 +174,140 @@ class PigPagingTests(TestCase):
         ch.save()
         with self.assertRaises(CommandError):
             call_command("configure_pig_scans", apply=True, stdout=io.StringIO())
+
+
+class SupersedeMidasScanTests(TestCase):
+    http = PigPagingTests.http
+
+    def setUp(self):
+        PigPagingTests.setUp(self)
+        self.channel.next_fetch_at = timezone.now() + timedelta(days=1)
+        self.channel.save(update_fields=["next_fetch_at"])
+        advance_harvest(self.channel, self.http())
+        self.ids = [1, 3, 5, 7, 9, 11]
+        with self.assertRaises(FetchError):
+            advance_harvest(self.channel, self.http())
+        self.harvest = DataHarvest.objects.get()
+        self.assertEqual((self.harvest.status, self.harvest.records), ("failed", 4))
+
+    def command(self, **kwargs):
+        out = io.StringIO()
+        with patch(
+            "ingestion.management.commands.supersede_midas_scan.Client",
+            return_value=self.http(),
+        ):
+            call_command("supersede_midas_scan", source=slug(0), stdout=out, **kwargs)
+        return out.getvalue()
+
+    def test_dry_run_apply_and_repeat_keep_pages_and_start_new_scan(self):
+        self.assertIn("Dry-run", self.command())
+        self.harvest.refresh_from_db()
+        self.assertEqual(self.harvest.status, "failed")
+        self.assertIn("superseded", self.command(apply=True))
+        h = DataHarvest.objects.get(pk=self.harvest.pk)
+        self.assertEqual(h.status, "superseded")
+        self.assertEqual(
+            (h.pages, h.records, h.next_url, h.config_hash),
+            (
+                self.harvest.pages,
+                self.harvest.records,
+                self.harvest.next_url,
+                self.harvest.config_hash,
+            ),
+        )
+        self.assertEqual(DataSnapshot.objects.count(), 2)
+        self.channel.refresh_from_db()
+        self.assertLessEqual(self.channel.next_fetch_at, timezone.now())
+        self.assertIn("no changes", self.command(apply=True))
+        result = advance_harvest(self.channel, self.http())
+        self.assertEqual((result["records"], result["source_count"]), (4, 6))
+        self.assertNotEqual(result["harvest_id"], self.harvest.pk)
+        self.assertIn("no changes", self.command(apply=True))
+        self.assertEqual(DataSnapshot.objects.count(), 4)
+        self.assertEqual(DataHarvest.objects.get(pk=self.harvest.pk).status, "superseded")
+
+    def test_unchanged_manifest_complete_scan_and_due_channel_are_refused(self):
+        self.ids = [1, 3, 5, 7, 9]
+        with self.assertRaises(CommandError):
+            self.command(apply=True)
+        self.channel.next_fetch_at = timezone.now()
+        self.channel.save(update_fields=["next_fetch_at"])
+        self.ids = [1, 3, 5, 7, 9, 11]
+        with self.assertRaises(CommandError):
+            self.command(apply=True)
+        self.assertEqual(DataHarvest.objects.get().status, "failed")
+        DataHarvest.objects.update(status="complete")
+        with self.assertRaises(CommandError):
+            self.command(apply=True)
+        self.assertEqual(DataHarvest.objects.get().status, "complete")
+        self.assertEqual(DataSnapshot.objects.count(), 2)
+
+    def state(self):
+        # Everything the command could write: harvest rows and the channel schedule.
+        self.channel.refresh_from_db()
+        return list(DataHarvest.objects.order_by("pk").values()), self.channel.next_fetch_at
+
+    def test_invalid_profile_and_unavailable_manifest_are_refused_without_writes(self):
+        before = self.state()
+        self.channel.url = "https://example.invalid/outside-profile"
+        self.channel.save(update_fields=["url"])
+        with self.assertRaises(CommandError):
+            self.command(apply=True)
+        self.channel.url = channel_url(0)
+        self.channel.save(update_fields=["url"])
+        self.assertEqual(self.state(), before)
+        offline = Mock()
+        offline.get.side_effect = FetchError("offline")
+        with (
+            patch(
+                "ingestion.management.commands.supersede_midas_scan.Client",
+                return_value=offline,
+            ),
+            self.assertRaises(CommandError),
+        ):
+            call_command("supersede_midas_scan", source=slug(0), apply=True, stdout=io.StringIO())
+        offline.get.assert_called()
+        self.assertEqual(self.state(), before)
+
+    def test_harvest_changed_between_review_and_lock_writes_nothing(self):
+        def race():
+            # The first now() call happens after review and before the row lock.
+            DataHarvest.objects.filter(pk=self.harvest.pk).update(pages=9, records=9)
+            return timezone.now()
+
+        clock = Mock()
+        clock.now.side_effect = race
+        with (
+            patch("ingestion.management.commands.supersede_midas_scan.timezone", clock),
+            self.assertRaisesMessage(CommandError, "Harvest changed during review"),
+        ):
+            self.command(apply=True)
+        h = DataHarvest.objects.get()
+        self.assertEqual((h.status, h.pages, h.records), ("failed", 9, 9))
+        self.assertEqual(h.error, self.harvest.error)
+        self.assertNotIn("Superseded", h.error)
+        self.assertIsNone(h.finished_at)
+        self.channel.refresh_from_db()
+        self.assertGreater(self.channel.next_fetch_at, timezone.now())
+
+    def test_newest_interrupted_scan_is_selected_deterministically(self):
+        started = self.harvest.started_at
+        older = DataHarvest.objects.create(
+            channel=self.channel, config_hash="older", start_url="x", next_url="x", status="running"
+        )
+        # Same started_at for all three rows: the highest pk breaks the tie.
+        newest = DataHarvest.objects.create(
+            channel=self.channel,
+            config_hash="newest",
+            start_url="x",
+            next_url="x",
+            status="running",
+        )
+        DataHarvest.objects.update(started_at=started)
+        DataHarvest.objects.filter(pk=older.pk).update(started_at=started - timedelta(hours=1))
+        self.assertIn(f"Harvest {newest.pk} (running)", self.command())
+        self.command(apply=True)
+        self.assertEqual(
+            {h.pk: h.status for h in DataHarvest.objects.all()},
+            {self.harvest.pk: "failed", older.pk: "running", newest.pk: "superseded"},
+        )

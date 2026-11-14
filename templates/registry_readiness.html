@@ -8,7 +8,7 @@
 <p>Powiązane unikalne kanały informacyjne: {{ report.source_active }} aktywnych / {{ report.source_total }} wszystkich. Kanały danych: {{ report.data_total }}. Wielokrotne powiązanie jednego kanału z rejestrem nie zwiększa tych liczników.</p>
 <form method="get">{{ form.as_p }}<button>Filtruj / eksportuj</button></form>
 <p>Wyłączony kanał może być celowo wstrzymany. Brak zadania pobrania pliku na żądanie jest normalny. Nie aktywuj źródeł automatycznie na podstawie flag.</p>
-<div class="scroll"><table>
+<div class="scroll" role="region" aria-label="Gotowość rejestru, tabela przewijana poziomo" tabindex="0"><table>
 <thead><tr><th scope="col">Pozycja / stan integracji</th><th scope="col">Informacje i zakres</th><th scope="col">Dane / pliki</th><th scope="col">Przegląd</th></tr></thead>
 <tbody>{% for row in report.rows %}<tr>
 <td><a href="{% url 'registry_detail' row.registry_id %}">{{ row.registry_id }} — {{ row.organization }}</a><br>{{ row.name }}<br>{{ row.priority }} / {{ row.integration_state }}</td>

@@ -120,6 +120,27 @@ class InspireOeilParserTests(SimpleTestCase):
             self.perform(fixture().replace(forecast, b""))[0][0].metadata["source_forecasts"], []
         )
 
+    def test_missing_forecasts_section_is_allowed_but_ambiguous_or_other_sections_fail(self):
+        body = fixture()
+        start = body.index(b'<div id="section4">')
+        end = body.index(b'<div id="section2">')
+        section = body[start:end]
+        without = body[:start] + body[end:]
+        entry = self.perform(without)[0][0]
+        self.assertEqual(entry.metadata["source_forecasts"], [])
+        self.assertTrue(entry.metadata["source_forecasts_section_absent"])
+        self.assertEqual(len(entry.metadata["source_events"]), 1)
+        present = self.perform()[0][0]
+        self.assertEqual(len(present.metadata["source_forecasts"]), 1)
+        self.assertNotIn("source_forecasts_section_absent", present.metadata)
+        for broken in [
+            body.replace(section, section * 2),
+            without.replace(b'<div id="section3">', b'<div id="section3x">'),
+            without.replace(b'<div id="section5">', b'<div id="section5x">'),
+        ]:
+            with self.assertRaises(FetchError):
+                self.perform(broken)
+
     def test_status_changes_keep_key_and_svg_titles_do_not_affect_identity(self):
         first = self.perform()[0][0]
         changed = self.perform(fixture().replace(b"Awaiting committee decision", b"First reading"))[

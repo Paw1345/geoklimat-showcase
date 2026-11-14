@@ -3,7 +3,7 @@ from django.db import transaction
 
 from ingestion.models import RegistryEntry, Source
 from ingestion.service import batch_lock
-from ingestion.unep_news import CONFIG, NOTE, URL
+from ingestion.unep_news import CONFIG, LEGACY_NOTE, LEGACY_URL, NOTE, URL
 
 
 class Command(BaseCommand):
@@ -26,11 +26,38 @@ class Command(BaseCommand):
                 or list(source.registry_entries.values_list("registry_id", flat=True)) != [208]
             ):
                 raise CommandError("Preserving administrator registry linkage/state")
-            if (source.adapter, source.url, source.config) == ("web", URL, CONFIG):
+            state = (source.adapter, source.url, source.config)
+            if state == ("web", URL, CONFIG):
                 self.stdout.write("registry-208: unchanged; audit/approval preserved")
                 return
             if (
-                (source.adapter, source.url, source.config) != ("web", URL, {})
+                state == ("web", LEGACY_URL, CONFIG)
+                and source.interval_minutes == 360
+                and source.scope == LEGACY_NOTE
+            ):
+                # Already configured on the former address that now redirects: only move
+                # the endpoint. Approval, history, failures and cursors stay untouched.
+                self.stdout.write("registry-208: move UNEP news endpoint to the new address")
+                if not options["apply"]:
+                    self.stdout.write("Dry-run; no writes or HTTP")
+                    return
+                source.url, source.scope = URL, NOTE
+                source.last_audit, source.audited_at = {}, None
+                source.etag = source.last_modified = ""
+                source.save(
+                    update_fields=[
+                        "url",
+                        "scope",
+                        "last_audit",
+                        "audited_at",
+                        "etag",
+                        "last_modified",
+                    ]
+                )
+                return
+            if (
+                (source.adapter, source.url, source.config)
+                not in [("web", URL, {}), ("web", LEGACY_URL, {})]
                 or source.enabled
                 or source.activation_approved
                 or source.items.exists()
@@ -49,11 +76,12 @@ class Command(BaseCommand):
             if not options["apply"]:
                 self.stdout.write("Dry-run; no writes or HTTP")
                 return
-            source.config, source.scope = CONFIG, NOTE
+            source.url, source.config, source.scope = URL, CONFIG, NOTE
             source.last_audit, source.audited_at = {}, None
             source.etag = source.last_modified = ""
             source.save(
                 update_fields=[
+                    "url",
                     "config",
                     "scope",
                     "last_audit",

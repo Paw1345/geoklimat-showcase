@@ -109,9 +109,12 @@ class StacRecentTests(TransactionTestCase):
 
     def test_failed_page_keeps_committed_copy_and_next_attempt_is_fresh(self):
         client = self.transport()
-        client.get.side_effect = [self.response(initial_url(self.head)), FetchError("fixture")]
-        with self.assertRaises(FetchError):
-            advance_harvest(self.head, client)
+        # Freeze the clock: initial_url has second precision, so a second boundary between
+        # building the fixture URL and advance_harvest made the first page mismatch (CI).
+        with patch("django.utils.timezone.now", return_value=self.now):
+            client.get.side_effect = [self.response(initial_url(self.head)), FetchError("fixture")]
+            with self.assertRaises(FetchError):
+                advance_harvest(self.head, client)
         old = self.head.harvests.first()
         self.assertEqual((old.status, old.pages), ("failed", 1))
         self.assertEqual(self.head.snapshots.count(), 1)
@@ -255,7 +258,9 @@ class StacRecentTests(TransactionTestCase):
         self.client.force_login(
             get_user_model().objects.create_user(username="staff", is_staff=True)
         )
-        self.assertContains(self.client.get("/data/stac/"), "maks. 2 strony / 20 scen")
+        self.assertContains(
+            self.client.get("/data/stac/"), "maks. 2 strony / 20 wystąpień rekordów"
+        )
         harvest = self.head.harvests.first()
         query = f"/data/stac/scenes/?channel={self.head.pk}&harvest={harvest.pk}&format=geojson"
         response = self.client.get(query)

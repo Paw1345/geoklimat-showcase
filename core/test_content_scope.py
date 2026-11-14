@@ -32,17 +32,17 @@ class ContentScopeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         return response, set(response.context["items"])
 
-    def test_defaults_unchanged_and_no_filter_is_relevance_decision(self):
+    def test_default_hides_catalogues_and_all_is_an_explicit_choice(self):
         news = self.item("news")
         metadata = self.item("dataset_collection")
         Classification.objects.create(item=news, auto_state="excluded")
         for path in ("/", "/search/"):
-            for scope in (None, ""):
+            for scope in (None, "", "publications"):
                 params = {} if scope is None else {"record_scope": scope}
                 _, rows = self.rows(path, **params)
-                self.assertEqual(rows, {news, metadata})
-            _, rows = self.rows(path, record_scope="publications")
-            self.assertEqual(rows, {news})
+                self.assertEqual(rows, {news})
+            _, rows = self.rows(path, record_scope="all")
+            self.assertEqual(rows, {news, metadata})
 
     def test_known_catalogue_types_and_unknowns_are_preserved(self):
         catalogues = {self.item(kind) for kind in CATALOGUE_KINDS}
@@ -164,3 +164,15 @@ class ContentScopeTests(TestCase):
         classification.refresh_from_db()
         self.assertEqual(classification.auto_state, "review")
         self.assertEqual(before, (Item.objects.count(), Classification.objects.count()))
+
+    def test_start_page_links_to_news_law_and_consultations(self):
+        consultation = self.item("news")
+        Classification.objects.create(item=consultation, auto_state="relevant", kind="Konsultacje")
+        other = self.item("news")
+        response = self.client.get("/")
+        for target in ('href="/legislation/"', 'href="/?kind=Konsultacje"', 'href="/deadlines/"'):
+            self.assertContains(response, target)
+        self.assertNotContains(response, "Moje alerty")
+        _, rows = self.rows("/", kind="Konsultacje")
+        self.assertEqual(rows, {consultation})
+        self.assertIn(other, set(response.context["items"]))

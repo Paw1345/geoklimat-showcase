@@ -52,11 +52,21 @@ test data is generated only in temporary test directories.
 
 ## Technical notes
 
-- [Spatial geometry and query behavior](docs/SPATIAL-GEOMETRY.md)
-- [Spatial result paging](docs/SPATIAL-RESULT-PAGES.md)
-- [Data storage and retention](docs/DATA-STORAGE.md)
-- [STAC collection and coverage workflows](docs/STAC-COVERAGE.md)
+- [Product brief](docs/EPIC-0.md)
+- [Source catalogue](sources/sources.yaml): monitored sources, adapters and
+  schedules kept as configuration.
+- [SOPO access hold](docs/SOPO-ACCESS-HOLD.md): an example of a provider whose
+  terms keep automated collection switched off.
 - [Showcase data policy](docs/SHOWCASE-DATA.md)
+
+## Snapshot policy
+
+This repository is refreshed once a month with one snapshot commit
+(`Monthly snapshot YYYY-MM`) taken from the private development repository.
+Each snapshot leaves out the operator's source registry workbook, project
+notes, internal plans and history, and is scanned for credentials and personal
+data before it is published. Development happens elsewhere, so pull requests
+here are not merged into the next snapshot.
 
 ## Checks
 

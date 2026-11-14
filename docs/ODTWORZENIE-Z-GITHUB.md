@@ -29,7 +29,6 @@ docker compose -p geoklimat-demo build web worker
 docker compose -p geoklimat-demo up -d --wait db
 docker compose -p geoklimat-demo run --rm --no-deps web python manage.py migrate --noinput
 docker compose -p geoklimat-demo run --rm --no-deps web python manage.py seed_sources
-docker compose -p geoklimat-demo run --rm --no-deps web python manage.py seed_data_channels
 docker compose -p geoklimat-demo run --rm web python manage.py createsuperuser
 docker compose -p geoklimat-demo up -d web worker
 ```
@@ -55,6 +54,13 @@ Apply only after reviewing the workbook and dry-run:
 
 ```powershell
 docker compose -p geoklimat-demo run --rm --no-deps web python manage.py import_registry /app/local-data/registry.xlsx --apply
+```
+
+Data channels are linked to registry entries, so seed them only after the
+import:
+
+```powershell
+docker compose -p geoklimat-demo run --rm --no-deps web python manage.py seed_data_channels
 ```
 
 Importing registry definitions does not activate source collectors. Each source
